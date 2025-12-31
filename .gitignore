@@ -1,0 +1,26 @@
+# Persistente Datenverzeichnisse (nicht über Web zugänglich)
+data/
+
+# Temporäre Dateien im Hauptverzeichnis (für Download-API)
+zuteilung_schueler.csv
+zuteilung_kurse.csv
+zusammenfassung.txt
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

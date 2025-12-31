@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Methodentag - Kurszuteilung</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg role='img' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23FF1493' d='M10.145 20.014c-.266-.085-.267-.122-.022-.865.244-.743.132-1.432-.32-1.974-.617-.737-.914-1.366-1.009-2.135-.08-.66-.107-.713-.376-.764-.18-.035-.43.034-1.023.281-.864.36-1.07.52-1.273.98-.108.242-.12.387-.06.667.075.342.378.892.494.893.03 0 .196.114.368.252.287.23.307.27.225.458-.176.408-.595.902-.764.902-.095 0-.482-.272-.91-.637-.836-.717-.872-.79-.96-1.965-.1-1.403.244-2.058 1.78-3.375l.964-.827.062-.5c.063-.518-.026-1.748-.177-2.427-.09-.4-.382-.783-.66-.86-.303-.084-.48.09-.712.694-.25.654-.486.882-.92.882-.27 0-.52-.173-.694-.477C4.033 9 3.96 7.691 4.035 7.002c.036-.33.038-.666.005-.745-.054-.128-.52-.405-1.62-.962a4.343 4.343 0 0 1-.518-.303 3.053 3.053 0 0 0-.49-.267C.994 4.54-.095 3.903.007 3.903c.193 0 1.01.252 1.446.445.266.118.52.215.565.215.045 0 .558.165 1.14.366.58.202 1.111.367 1.18.367.16 0 .185-.14.134-.746-.024-.275-.023-.5.002-.5s.132.053.238.118c.324.198 1.02.32 1.84.32.783.002 1.806.157 2.196.335.56.254 1.211 1.05 2.036 2.49.574 1.002 1.19 1.426 2.073 1.427.357 0 1.31-.147 2.6-.4 1.063-.21 2.467-.259 3.012-.103.665.19 1.545.7 2.27 1.314.68.576.786.704 1.204 1.468.5.912 1.05 2.207 1.54 3.622.07.202.216.54.326.753.294.568.28.603-.255.603-.58 0-.853-.092-1.233-.415-.365-.31-.46-.5-1.032-2.05-.292-.796-.577-1.273-.76-1.273-.124 0-.376.852-.376 1.273 0 .3.187.702.67 1.447.788 1.21 1.202 2.922 1.036 4.28l-.07.586-.526.022c-.825.034-.817.046-.817-1.135 0-1.257-.085-1.529-.64-2.035-.23-.21-.748-.81-1.149-1.33-.402-.52-.786-.946-.854-.946-.158 0-.236.428-.244 1.332-.006.595-.03.696-.205.88-.476.497-.81 1.403-1.016 2.754-.046.3-.085.355-.279.398-.285.064-1.075.075-1.143.015-.059-.05.044-.863.278-2.19.088-.504.185-1.18.214-1.503.053-.574-.065-1.65-.204-1.867-.058-.09-.353-.11-1.732-.116-.915-.003-1.918-.033-2.23-.066l-.565-.06v.25c0 .27.07.506.53 1.822.162.464.397 1.17.523 1.57l.227.728-.192.592a6.11 6.11 0 0 1-.348.867c-.152.266-.17.274-.595.27a2.97 2.97 0 0 1-.677-.083z'/%3E%3C/svg%3E">
+    
+    <!-- Material Design 3 -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+    
+    <!-- html2canvas für PNG Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <style>
+        /* Light Mode Colors */
+        :root[data-theme="light"] {
+            /* Material Design 3 Color Tokens - Light */
+            --md-sys-color-primary: #6750A4;
+            --md-sys-color-on-primary: #FFFFFF;
+            --md-sys-color-primary-container: #EADDFF;
+            --md-sys-color-on-primary-container: #21005D;
+            
+            --md-sys-color-secondary: #625B71;
+            --md-sys-color-on-secondary: #FFFFFF;
+            --md-sys-color-secondary-container: #E8DEF8;
+            --md-sys-color-on-secondary-container: #1D192B;
+            
+            --md-sys-color-tertiary: #7D5260;
+            --md-sys-color-on-tertiary: #FFFFFF;
+            
+            --md-sys-color-error: #B3261E;
+            --md-sys-color-on-error: #FFFFFF;
+            --md-sys-color-error-container: #F9DEDC;
+            --md-sys-color-on-error-container: #410E0B;
+            
+            --md-sys-color-background: #FEF7FF;
+            --md-sys-color-on-background: #1D1B20;
+            --md-sys-color-surface: #FEF7FF;
+            --md-sys-color-on-surface: #1D1B20;
+            --md-sys-color-surface-variant: #E7E0EC;
+            --md-sys-color-on-surface-variant: #49454F;
+            --md-sys-color-outline: #79747E;
+            --md-sys-color-outline-variant: #CAC4D0;
+            
+            --md-sys-color-surface-container: #F3EDF7;
+            --md-sys-color-surface-container-high: #ECE6F0;
+            --md-sys-color-surface-container-highest: #E6E0E9;
+        }
+        
+        /* Dark Mode Colors (Default) */
+        :root,
+        :root[data-theme="dark"] {
+            /* Material Design 3 Color Tokens - Dark */
+            --md-sys-color-primary: #D0BCFF;
+            --md-sys-color-on-primary: #381E72;
+            --md-sys-color-primary-container: #4F378B;
+            --md-sys-color-on-primary-container: #EADDFF;
+            
+            --md-sys-color-secondary: #CCC2DC;
+            --md-sys-color-on-secondary: #332D41;
+            --md-sys-color-secondary-container: #4A4458;
+            --md-sys-color-on-secondary-container: #E8DEF8;
+            
+            --md-sys-color-tertiary: #EFB8C8;
+            --md-sys-color-on-tertiary: #492532;
+            
+            --md-sys-color-error: #F2B8B5;
+            --md-sys-color-on-error: #601410;
+            --md-sys-color-error-container: #8C1D18;
+            --md-sys-color-on-error-container: #F9DEDC;
+            
+            --md-sys-color-background: #1D1B20;
+            --md-sys-color-on-background: #E6E0E9;
+            --md-sys-color-surface: #1D1B20;
+            --md-sys-color-on-surface: #E6E0E9;
+            --md-sys-color-surface-variant: #49454F;
+            --md-sys-color-on-surface-variant: #CAC4D0;
+            --md-sys-color-outline: #938F99;
+            --md-sys-color-outline-variant: #49454F;
+            
+            --md-sys-color-surface-container: #211F26;
+            --md-sys-color-surface-container-high: #2B2930;
+            --md-sys-color-surface-container-highest: #36343B;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--md-sys-color-background);
+            color: var(--md-sys-color-on-background);
+            line-height: 1.6;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        
+        /* App Bar */
+        .app-bar {
+            background-color: var(--md-sys-color-surface);
+            color: var(--md-sys-color-on-surface);
+            padding: 16px 24px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .app-bar h1 {
+            font-size: 22px;
+            font-weight: 400;
+            display: flex;
+            align-items: center;
+        }
+        
+        .app-bar h1 .material-symbols-outlined {
+            font-size: 28px;
+            margin-right: 12px;
+        }
+        
+        /* Theme Toggle */
+        .theme-toggle {
+            background: none;
+            border: none;
+            color: var(--md-sys-color-on-surface);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+        
+        .theme-toggle:hover {
+            background-color: var(--md-sys-color-surface-container-highest);
+        }
+        
+        .theme-toggle .material-symbols-outlined {
+            font-size: 24px;
+            margin: 0;
+        }
+        
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+        
+        /* Cards */
+        .card {
+            background-color: var(--md-sys-color-surface-container);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        }
+        
+        .card h2 {
+            font-size: 20px;
+            font-weight: 500;
+            margin-bottom: 16px;
+            color: var(--md-sys-color-on-surface);
+            display: flex;
+            align-items: center;
+        }
+        
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 24px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--md-sys-color-on-surface-variant);
+            margin-bottom: 8px;
+        }
+        
+        .text-field {
+            width: 100%;
+            padding: 16px;
+            font-size: 16px;
+            font-family: 'Roboto', sans-serif;
+            border: 1px solid var(--md-sys-color-outline);
+            border-radius: 4px;
+            background-color: var(--md-sys-color-surface);
+            color: var(--md-sys-color-on-surface);
+            transition: border-color 0.2s;
+        }
+        
+        .text-field:focus {
+            outline: none;
+            border-color: var(--md-sys-color-primary);
+            border-width: 2px;
+            padding: 15px;
+        }
+        
+        /* Switch */
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 52px;
+            height: 32px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--md-sys-color-surface-variant);
+            transition: 0.3s;
+            border-radius: 16px;
+            border: 2px solid var(--md-sys-color-outline);
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 6px;
+            bottom: 6px;
+            background-color: var(--md-sys-color-outline);
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: var(--md-sys-color-primary);
+            border-color: var(--md-sys-color-primary);
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(20px);
+            background-color: var(--md-sys-color-on-primary);
+        }
+        
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: 500;
+            font-family: 'Roboto', sans-serif;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background-color: var(--md-sys-color-primary);
+            color: var(--md-sys-color-on-primary);
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background-color: #7965AF;
+            box-shadow: 0 2px 8px rgba(103, 80, 164, 0.3);
+        }
+        
+        .btn-secondary {
+            background-color: var(--md-sys-color-secondary-container);
+            color: var(--md-sys-color-on-secondary-container);
+        }
+        
+        .btn-secondary:hover:not(:disabled) {
+            background-color: #D5CAE8;
+        }
+        
+        .btn:disabled {
+            opacity: 0.38;
+            cursor: not-allowed;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        /* Info Box */
+        .info-box {
+            background-color: var(--md-sys-color-primary-container);
+            color: var(--md-sys-color-on-primary-container);
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: start;
+            gap: 12px;
+        }
+        
+        .info-box .material-symbols-outlined {
+            color: var(--md-sys-color-primary);
+            font-size: 24px;
+        }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .stat-card {
+            background-color: var(--md-sys-color-surface-container-high);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: 500;
+            color: var(--md-sys-color-primary);
+            margin-bottom: 4px;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: var(--md-sys-color-on-surface-variant);
+        }
+        
+        /* Table */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 16px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--md-sys-color-outline-variant);
+        }
+        
+        th {
+            background-color: var(--md-sys-color-surface-container-highest);
+            font-weight: 500;
+            color: var(--md-sys-color-on-surface-variant);
+            font-size: 14px;
+        }
+        
+        tr:hover {
+            background-color: var(--md-sys-color-surface-container);
+        }
+        
+        /* Loading Spinner */
+        .spinner {
+            display: none;
+            border: 3px solid var(--md-sys-color-surface-variant);
+            border-top: 3px solid var(--md-sys-color-primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading .spinner {
+            display: block;
+        }
+        
+        /* Hidden */
+        .hidden {
+            display: none !important;
+        }
+        
+        /* Course Limits Table */
+        .course-limits-container {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 16px;
+            border: 1px solid var(--md-sys-color-outline-variant);
+            border-radius: 8px;
+        }
+        
+        .course-limits-table {
+            width: 100%;
+        }
+        
+        .course-limits-table th,
+        .course-limits-table td {
+            padding: 8px 12px;
+        }
+        
+        .course-limits-table input[type="number"] {
+            width: 80px;
+            padding: 6px 8px;
+            font-size: 14px;
+            border: 1px solid var(--md-sys-color-outline);
+            border-radius: 4px;
+            background-color: var(--md-sys-color-surface);
+            color: var(--md-sys-color-on-surface);
+        }
+        
+        .course-limits-table input[type="number"]:focus {
+            outline: none;
+            border-color: var(--md-sys-color-primary);
+            border-width: 2px;
+            padding: 5px 7px;
+        }
+        
+        .limit-set {
+            background-color: var(--md-sys-color-primary-container);
+        }
+        
+        .limit-set input {
+            border-color: var(--md-sys-color-primary);
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 16px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .app-bar h1 {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- App Bar -->
+    <div class="app-bar">
+        <h1>
+            <span class="material-symbols-outlined">school</span>
+            Methodentag - Kurszuteilung
+        </h1>
+        <button class="theme-toggle" onclick="toggleTheme()" title="Farbschema wechseln">
+            <span class="material-symbols-outlined" id="themeIcon">light_mode</span>
+        </button>
+    </div>
+    
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Anleitung Card -->
+        <div class="card" style="background: linear-gradient(135deg, var(--md-sys-color-primary-container) 0%, var(--md-sys-color-secondary-container) 100%); border-left: 4px solid var(--md-sys-color-primary);">
+            <h2>
+                <span class="material-symbols-outlined">info</span>
+                Wichtige Hinweise vor dem Upload
+            </h2>
+            <div style="color: var(--md-sys-color-on-primary-container); line-height: 1.8;">
+                <p style="margin-bottom: 12px;"><strong>📋 Datenexport aus Lanis:</strong></p>
+                <ul style="margin-left: 20px; margin-bottom: 16px;">
+                    <li>Exportieren Sie die Daten als <strong>"Export mit gebündelten Alternativen"</strong></li>
+                    <li>Schüler, die nicht gewählt haben, sollten <strong>ohne Wünsche am Ende der Liste hinzugefügt</strong> werden</li>
+                    <li>Ungültige Schüler (z.B. mit Klasse "unbekannt") werden automatisch entfernt</li>
+                </ul>
+                
+                <p style="margin-bottom: 12px;"><strong>✅ Vor dem Upload:</strong></p>
+                <ul style="margin-left: 20px;">
+                    <li>Prüfen Sie die CSV-Datei auf <strong>Vollständigkeit und Korrektheit</strong></li>
+                    <li>Stellen Sie sicher, dass alle Schülernamen und Klassen korrekt sind</li>
+                    <li>Überprüfen Sie, ob alle Kursnamen einheitlich geschrieben sind</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Upload Card -->
+        <div class="card">
+            <h2>
+                <span class="material-symbols-outlined">upload_file</span>
+                1. CSV-Datei hochladen
+            </h2>
+            <p style="margin-bottom: 16px; color: var(--md-sys-color-on-surface-variant);">
+                Laden Sie die CSV-Datei mit den Schülerdaten hoch (enthält Nachname, Vorname, Klasse und Wünsche).
+            </p>
+            
+            <div style="margin-bottom: 16px;">
+                <input type="file" id="csvFile" accept=".csv" style="display: none;" onchange="uploadFile()">
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="document.getElementById('csvFile').click()">
+                        <span class="material-symbols-outlined">folder_open</span>
+                        Datei auswählen
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearData()" id="clearBtn" style="display: none;">
+                        <span class="material-symbols-outlined">delete</span>
+                        Daten löschen
+                    </button>
+                </div>
+            </div>
+            
+            <div id="uploadStatus" class="hidden" style="margin-top: 16px;">
+                <div id="uploadSuccess" class="info-box" style="display: none; background-color: var(--md-sys-color-primary-container);">
+                    <span class="material-symbols-outlined" style="color: var(--md-sys-color-primary);">check_circle</span>
+                    <div>
+                        <strong>Datei erfolgreich hochgeladen!</strong><br>
+                        <span id="uploadedFileName"></span>
+                    </div>
+                </div>
+                <div id="uploadError" class="info-box" style="display: none; background-color: var(--md-sys-color-error-container);">
+                    <span class="material-symbols-outlined" style="color: var(--md-sys-color-error);">error</span>
+                    <div>
+                        <strong>Fehler beim Hochladen!</strong><br>
+                        <span id="uploadErrorMessage"></span>
+                    </div>
+                </div>
+            </div>
+            <div id="uploadSpinner" class="spinner"></div>
+        </div>
+        
+        <!-- Analysis Card -->
+        <div class="card">
+            <h2>
+                <span class="material-symbols-outlined">analytics</span>
+                2. Datenanalyse
+            </h2>
+            <p style="margin-bottom: 16px; color: var(--md-sys-color-on-surface-variant);">
+                Laden Sie die CSV-Datei und analysieren Sie die Daten.
+            </p>
+            <button class="btn btn-primary" id="analyzeBtn" onclick="analyzeData()" disabled>
+                <span class="material-symbols-outlined">query_stats</span>
+                Daten analysieren
+            </button>
+            <div id="analysisSpinner" class="spinner"></div>
+            <div id="analysisResults" class="hidden" style="margin-top: 24px;">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="studentCount">-</div>
+                        <div class="stat-label">Schüler</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="courseCount">-</div>
+                        <div class="stat-label">Kurse</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Configuration Card -->
+        <div class="card">
+            <h2>
+                <span class="material-symbols-outlined">settings</span>
+                3. Konfiguration
+            </h2>
+            
+            <div class="form-group">
+                <label for="maxStudents">Maximale Anzahl Schüler pro Kurs (global, optional)</label>
+                <input type="number" id="maxStudents" class="text-field" 
+                       placeholder="Leer lassen für keine globale Begrenzung" min="1">
+                <small style="color: var(--md-sys-color-on-surface-variant); display: block; margin-top: 4px;">
+                    Gilt für alle Kurse, außer individuell festgelegt (siehe unten)
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label>Gleichmäßige Kursverteilung</label>
+                <div class="switch-container">
+                    <label class="switch">
+                        <input type="checkbox" id="equalDistribution">
+                        <span class="slider"></span>
+                    </label>
+                    <span style="color: var(--md-sys-color-on-surface-variant);">
+                        Alle Kurse sollen ungefähr gleich viele Schüler haben
+                    </span>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Individuelle Kurslimits (optional)</label>
+                <div style="margin-bottom: 8px;">
+                    <button class="btn btn-secondary" onclick="toggleCourseLimits()" type="button">
+                        <span class="material-symbols-outlined">tune</span>
+                        <span id="toggleCourseLimitsText">Anzeigen</span>
+                    </button>
+                </div>
+                <div id="courseLimitsContainer" class="hidden course-limits-container">
+                    <table class="course-limits-table">
+                        <thead>
+                            <tr>
+                                <th>Kurs</th>
+                                <th>Max. Schüler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="courseLimitsBody">
+                            <!-- Wird dynamisch gefüllt -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Assignment Card -->
+        <div class="card">
+            <h2>
+                <span class="material-symbols-outlined">assignment</span>
+                4. Zuteilung durchführen
+            </h2>
+            <p style="margin-bottom: 16px; color: var(--md-sys-color-on-surface-variant);">
+                Starten Sie den Zuteilungsalgorithmus mit den gewählten Einstellungen.
+            </p>
+            <button class="btn btn-primary" id="assignBtn" onclick="runAssignment()" disabled>
+                <span class="material-symbols-outlined">play_arrow</span>
+                Zuteilung starten
+            </button>
+            <div id="assignmentSpinner" class="spinner"></div>
+        </div>
+        
+        <!-- Results Card -->
+        <div id="resultsCard" class="card hidden">
+            <h2>
+                <span class="material-symbols-outlined">check_circle</span>
+                Ergebnisse
+            </h2>
+            
+            <!-- Statistik-Container für PNG-Export -->
+            <div id="resultsSummary">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="fulfillmentRate">-</div>
+                        <div class="stat-label">Erfüllungsrate</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="avgCourseSize">-</div>
+                        <div class="stat-label">Ø Kursgröße</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="studentsWithoutWishes">-</div>
+                        <div class="stat-label">Ohne Wunscherfüllung</div>
+                    </div>
+                </div>
+                
+                <h3 style="margin-top: 24px; margin-bottom: 12px; font-size: 16px; font-weight: 500;">
+                    Erfüllte Wünsche nach Priorität
+                </h3>
+                <div id="wishPriorities" class="stats-grid">
+                    <!-- Wird dynamisch gefüllt -->
+                </div>
+                
+                <h3 style="margin-top: 24px; margin-bottom: 12px; font-size: 16px; font-weight: 500;">
+                    Verteilung erfüllter Wünsche pro Schüler
+                </h3>
+                <div id="wishesPerStudent" class="stats-grid">
+                    <!-- Wird dynamisch gefüllt -->
+                </div>
+                
+                <h3 style="margin-top: 24px; margin-bottom: 12px; font-size: 16px; font-weight: 500;">
+                    Kursstatistiken
+                </h3>
+                <div class="table-container">
+                    <table id="courseStatsTable">
+                        <thead>
+                            <tr>
+                                <th>Kurs</th>
+                                <th>Gesamt</th>
+                                <th>Zeit 1</th>
+                                <th>Zeit 2</th>
+                                <th>Zeit 3</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Wird dynamisch gefüllt -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <h3 style="margin-top: 24px; margin-bottom: 12px; font-size: 16px; font-weight: 500;">
+                Download
+            </h3>
+            
+            <!-- Countdown Warning (nur im RAM-Only Modus) -->
+            <div id="countdownWarning" class="hidden" style="margin-bottom: 16px; padding: 12px; background-color: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container); border-radius: 8px; display: flex; align-items: center; gap: 12px;">
+                <span class="material-symbols-outlined" style="color: var(--md-sys-color-error);">schedule</span>
+                <div>
+                    <strong>⏰ Automatisches Löschen</strong><br>
+                    <span id="countdownText">Die Dateien werden in <span id="countdownTime" style="font-weight: 500;">--:--</span> automatisch gelöscht!</span>
+                </div>
+            </div>
+            
+            <!-- Export Format Toggle -->
+            <div style="margin-bottom: 16px;">
+                <div class="switch-container">
+                    <label class="switch">
+                        <input type="checkbox" id="exportAsExcel" onchange="updateDownloadLinks()">
+                        <span class="slider"></span>
+                    </label>
+                    <span style="color: var(--md-sys-color-on-surface-variant);">
+                        Als Excel (.xlsx) exportieren
+                    </span>
+                </div>
+                <small style="color: var(--md-sys-color-on-surface-variant); display: block; margin-top: 4px; margin-left: 52px;">
+                    CSV empfohlen für bessere Kompatibilität
+                </small>
+            </div>
+            
+            <div class="btn-group">
+                <a id="downloadStudents" href="/api/download/zuteilung_schueler.csv" class="btn btn-secondary" download>
+                    <span class="material-symbols-outlined">download</span>
+                    <span id="downloadStudentsText">Schüler-Zuteilung (CSV)</span>
+                </a>
+                <a id="downloadCourses" href="/api/download/zuteilung_kurse.csv" class="btn btn-secondary" download>
+                    <span class="material-symbols-outlined">download</span>
+                    <span id="downloadCoursesText">Kurs-Übersicht (CSV)</span>
+                </a>
+                <a href="/api/download/zusammenfassung.txt" class="btn btn-secondary" download>
+                    <span class="material-symbols-outlined">download</span>
+                    Zusammenfassung (TXT)
+                </a>
+                <button class="btn btn-secondary" onclick="downloadResultsAsPNG()">
+                    <span class="material-symbols-outlined">image</span>
+                    Zusammenfassung (PNG)
+                </button>
+            </div>
+            
+            <!-- Nutellabrot Nachricht -->
+            <div style="margin-top: 24px; padding: 20px; background: linear-gradient(135deg, var(--md-sys-color-primary-container) 0%, var(--md-sys-color-secondary-container) 100%); border-radius: 16px; display: flex; align-items: center; gap: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <img src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse4.mm.bing.net%2Fth%2Fid%2FOIP.dD3eeH3_wDUAkaO6wzNXxQHaE8%3Fcb%3Ducfimgc2%26pid%3DApi&f=1&ipt=74f1a33736e741eeef0bc64807851b199a7a1c6a7090fbcbcc87ef6f35f2055d&ipo=images" 
+                     alt="Nutellabrot" 
+                     style="width: 120px; height: 120px; object-fit: cover; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+                <div style="flex: 1;">
+                    <h3 style="margin: 0 0 8px 0; color: var(--md-sys-color-on-primary-container); font-size: 20px; font-weight: 500;">
+                        🎉 Mach dir doch in der gesparten Zeit ein Nutellabrot! 🍫
+                    </h3>
+                    <p style="margin: 0; color: var(--md-sys-color-on-surface-variant); font-size: 14px;">
+                        Die Zuteilung ist fertig – Zeit für eine wohlverdiente Pause! 😋
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let coursesList = [];
+        let countdownInterval = null;
+        let deleteTimestamp = null;
+        
+        // Theme Management
+        function initTheme() {
+            // Standard ist Dark Mode
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateThemeIcon(savedTheme);
+        }
+        
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+        }
+        
+        function updateThemeIcon(theme) {
+            const icon = document.getElementById('themeIcon');
+            if (theme === 'dark') {
+                icon.textContent = 'light_mode';
+            } else {
+                icon.textContent = 'dark_mode';
+            }
+        }
+        
+        // Init theme on page load
+        initTheme();
+        
+        // Countdown Management
+        async function fetchDeleteTimestamp() {
+            try {
+                const response = await fetch('/api/delete-timestamp');
+                const data = await response.json();
+                
+                if (data.ramOnlyMode && data.deleteTimestamp) {
+                    deleteTimestamp = data.deleteTimestamp;
+                    startCountdown();
+                }
+            } catch (error) {
+                console.error('Fehler beim Abrufen des Delete-Timestamps:', error);
+            }
+        }
+        
+        function startCountdown() {
+            const countdownWarning = document.getElementById('countdownWarning');
+            const countdownTime = document.getElementById('countdownTime');
+            
+            if (!deleteTimestamp) {
+                countdownWarning.classList.add('hidden');
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                }
+                return;
+            }
+            
+            countdownWarning.classList.remove('hidden');
+            
+            function updateCountdown() {
+                const now = Date.now() / 1000;
+                const remaining = deleteTimestamp - now;
+                
+                if (remaining <= 0) {
+                    countdownTime.textContent = '00:00';
+                    countdownWarning.style.backgroundColor = 'var(--md-sys-color-error)';
+                    countdownWarning.style.color = 'var(--md-sys-color-on-error)';
+                    document.getElementById('countdownText').innerHTML = '<strong>⚠️ Dateien wurden gelöscht!</strong> Bitte führen Sie die Zuteilung erneut durch.';
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                    return;
+                }
+                
+                const minutes = Math.floor(remaining / 60);
+                const seconds = Math.floor(remaining % 60);
+                countdownTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                // Warnung intensivieren wenn weniger als 2 Minuten
+                if (remaining < 120) {
+                    countdownWarning.style.backgroundColor = 'var(--md-sys-color-error)';
+                    countdownWarning.style.color = 'var(--md-sys-color-on-error)';
+                }
+            }
+            
+            updateCountdown();
+            
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+            countdownInterval = setInterval(updateCountdown, 1000);
+        }
+        
+        function stopCountdown() {
+            deleteTimestamp = null;
+            const countdownWarning = document.getElementById('countdownWarning');
+            countdownWarning.classList.add('hidden');
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+        }
+        
+        // Download Links Management
+        function updateDownloadLinks() {
+            const exportAsExcel = document.getElementById('exportAsExcel').checked;
+            const downloadStudents = document.getElementById('downloadStudents');
+            const downloadCourses = document.getElementById('downloadCourses');
+            const downloadStudentsText = document.getElementById('downloadStudentsText');
+            const downloadCoursesText = document.getElementById('downloadCoursesText');
+            
+            if (exportAsExcel) {
+                downloadStudents.href = '/api/download/zuteilung_schueler.xlsx';
+                downloadCourses.href = '/api/download/zuteilung_kurse.xlsx';
+                downloadStudentsText.textContent = 'Schüler-Zuteilung (Excel)';
+                downloadCoursesText.textContent = 'Kurs-Übersicht (Excel)';
+            } else {
+                downloadStudents.href = '/api/download/zuteilung_schueler.csv';
+                downloadCourses.href = '/api/download/zuteilung_kurse.csv';
+                downloadStudentsText.textContent = 'Schüler-Zuteilung (CSV)';
+                downloadCoursesText.textContent = 'Kurs-Übersicht (CSV)';
+            }
+        }
+        
+        // PNG Download Funktion
+        async function downloadResultsAsPNG() {
+            const resultsSummary = document.getElementById('resultsSummary');
+            const resultsCard = document.getElementById('resultsCard');
+            
+            if (!resultsCard || resultsCard.classList.contains('hidden') || !resultsSummary) {
+                alert('Keine Ergebnisse zum Exportieren verfügbar');
+                return;
+            }
+            
+            try {
+                // Erstelle Screenshot nur der Statistik-Zusammenfassung (ohne Download-Buttons)
+                const canvas = await html2canvas(resultsSummary, {
+                    backgroundColor: getComputedStyle(document.documentElement)
+                        .getPropertyValue('--md-sys-color-surface').trim(),
+                    scale: 2, // Höhere Auflösung für bessere Qualität
+                    logging: false,
+                    useCORS: true
+                });
+                
+                // Konvertiere zu Blob und starte Download
+                canvas.toBlob(function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                    link.download = `zuteilung_zusammenfassung_${timestamp}.png`;
+                    link.href = url;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                });
+            } catch (error) {
+                console.error('Fehler beim PNG-Export:', error);
+                alert('Fehler beim Erstellen der PNG-Datei: ' + error.message);
+            }
+        }
+        
+        async function uploadFile() {
+            const fileInput = document.getElementById('csvFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                return;
+            }
+            
+            const uploadSpinner = document.getElementById('uploadSpinner');
+            const uploadStatus = document.getElementById('uploadStatus');
+            const uploadSuccess = document.getElementById('uploadSuccess');
+            const uploadError = document.getElementById('uploadError');
+            
+            uploadSpinner.style.display = 'block';
+            uploadStatus.classList.remove('hidden');
+            uploadSuccess.style.display = 'none';
+            uploadError.style.display = 'none';
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('uploadedFileName').textContent = 
+                        `${data.filename} (${data.studentCount} Schüler, ${data.courseCount} Kurse)`;
+                    uploadSuccess.style.display = 'flex';
+                    document.getElementById('clearBtn').style.display = 'inline-flex';
+                    
+                    // Aktiviere die Buttons
+                    document.getElementById('analyzeBtn').disabled = false;
+                    document.getElementById('assignBtn').disabled = false;
+                    
+                    // Auto-analyze nach Upload
+                    setTimeout(() => analyzeData(), 500);
+                } else {
+                    document.getElementById('uploadErrorMessage').textContent = data.error;
+                    uploadError.style.display = 'flex';
+                }
+            } catch (error) {
+                document.getElementById('uploadErrorMessage').textContent = error.message;
+                uploadError.style.display = 'flex';
+            } finally {
+                uploadSpinner.style.display = 'none';
+            }
+        }
+        
+        async function clearData() {
+            if (!confirm('Möchten Sie wirklich alle Daten aus dem Speicher löschen?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/clear', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Reset UI
+                    document.getElementById('uploadStatus').classList.add('hidden');
+                    document.getElementById('analysisResults').classList.add('hidden');
+                    document.getElementById('resultsCard').classList.add('hidden');
+                    document.getElementById('clearBtn').style.display = 'none';
+                    document.getElementById('csvFile').value = '';
+                    
+                    // Deaktiviere die Buttons
+                    document.getElementById('analyzeBtn').disabled = true;
+                    document.getElementById('assignBtn').disabled = true;
+                    
+                    // Stoppe Countdown
+                    stopCountdown();
+                    
+                    alert('✓ Daten wurden aus dem Speicher gelöscht');
+                }
+            } catch (error) {
+                alert('Fehler beim Löschen: ' + error.message);
+            }
+        }
+        
+        async function analyzeData() {
+            const spinner = document.getElementById('analysisSpinner');
+            const results = document.getElementById('analysisResults');
+            
+            spinner.style.display = 'block';
+            results.classList.add('hidden');
+            
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('studentCount').textContent = data.studentCount;
+                    document.getElementById('courseCount').textContent = data.courseCount;
+                    results.classList.remove('hidden');
+                    
+                    // Speichere Kursliste und erstelle Limits-Tabelle
+                    coursesList = data.courses || [];
+                    populateCourseLimitsTable();
+                } else {
+                    alert('Fehler: ' + data.error);
+                }
+            } catch (error) {
+                alert('Fehler bei der Analyse: ' + error.message);
+            } finally {
+                spinner.style.display = 'none';
+            }
+        }
+        
+        function populateCourseLimitsTable() {
+            const tbody = document.getElementById('courseLimitsBody');
+            tbody.innerHTML = '';
+            
+            // Sortiere Kurse alphabetisch
+            const sortedCourses = [...coursesList].sort((a, b) => a.name.localeCompare(b.name));
+            
+            sortedCourses.forEach(course => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" 
+                        title="${course.name}">${course.name}</td>
+                    <td>
+                        <input type="number" 
+                               class="course-limit-input" 
+                               data-course="${course.name}" 
+                               placeholder="Standard" 
+                               min="1"
+                               onchange="highlightLimitRow(this)">
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        function highlightLimitRow(input) {
+            const row = input.closest('tr');
+            if (input.value.trim() !== '') {
+                row.classList.add('limit-set');
+            } else {
+                row.classList.remove('limit-set');
+            }
+        }
+        
+        function toggleCourseLimits() {
+            const container = document.getElementById('courseLimitsContainer');
+            const text = document.getElementById('toggleCourseLimitsText');
+            
+            if (container.classList.contains('hidden')) {
+                container.classList.remove('hidden');
+                text.textContent = 'Ausblenden';
+            } else {
+                container.classList.add('hidden');
+                text.textContent = 'Anzeigen';
+            }
+        }
+        
+        function getCourseLimits() {
+            const limits = {};
+            const inputs = document.querySelectorAll('.course-limit-input');
+            
+            inputs.forEach(input => {
+                const courseName = input.getAttribute('data-course');
+                const value = input.value.trim();
+                
+                if (value !== '') {
+                    limits[courseName] = parseInt(value);
+                }
+            });
+            
+            return limits;
+        }
+        
+        async function runAssignment() {
+            const spinner = document.getElementById('assignmentSpinner');
+            const resultsCard = document.getElementById('resultsCard');
+            
+            const maxStudents = document.getElementById('maxStudents').value;
+            const equalDistribution = document.getElementById('equalDistribution').checked;
+            const courseLimits = getCourseLimits();
+            
+            spinner.style.display = 'block';
+            resultsCard.classList.add('hidden');
+            
+            try {
+                const response = await fetch('/api/assign', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        maxStudents: maxStudents,
+                        equalDistribution: equalDistribution,
+                        courseLimits: courseLimits
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayResults(data.stats);
+                    resultsCard.classList.remove('hidden');
+                    resultsCard.scrollIntoView({ behavior: 'smooth' });
+                    
+                    // Starte Countdown für Auto-Delete
+                    setTimeout(fetchDeleteTimestamp, 500);
+                } else {
+                    alert('Fehler: ' + data.error);
+                }
+            } catch (error) {
+                alert('Fehler bei der Zuteilung: ' + error.message);
+            } finally {
+                spinner.style.display = 'none';
+            }
+        }
+        
+        function displayResults(stats) {
+            // Hauptstatistiken
+            document.getElementById('fulfillmentRate').textContent = stats.fulfillmentRate + '%';
+            document.getElementById('avgCourseSize').textContent = stats.averageCourseSize;
+            document.getElementById('studentsWithoutWishes').textContent = stats.studentsWithoutWishes;
+            
+            // Wunschprioritäten
+            const wishPriorities = document.getElementById('wishPriorities');
+            wishPriorities.innerHTML = '';
+            
+            for (let i = 1; i <= 4; i++) {
+                const count = stats.wishPriorities[i] || 0;
+                const div = document.createElement('div');
+                div.className = 'stat-card';
+                div.innerHTML = `
+                    <div class="stat-value">${count}</div>
+                    <div class="stat-label">${i}. Wunsch</div>
+                `;
+                wishPriorities.appendChild(div);
+            }
+            
+            // Verteilung Wünsche pro Schüler
+            const wishesPerStudent = document.getElementById('wishesPerStudent');
+            wishesPerStudent.innerHTML = '';
+            
+            // Sortiere nach Anzahl der Wünsche
+            const wishesPerStudentData = Object.entries(stats.wishesPerStudent || {})
+                .map(([wishes, count]) => ({ wishes: parseInt(wishes), count: count }))
+                .sort((a, b) => a.wishes - b.wishes);
+            
+            const totalStudents = stats.studentCount;
+            
+            wishesPerStudentData.forEach(({ wishes, count }) => {
+                const percentage = totalStudents > 0 ? (count / totalStudents * 100).toFixed(1) : 0;
+                const div = document.createElement('div');
+                div.className = 'stat-card';
+                
+                const label = wishes === 0 ? '0 Wünsche' : 
+                             wishes === 1 ? '1 Wunsch' : 
+                             `${wishes} Wünsche`;
+                
+                div.innerHTML = `
+                    <div class="stat-value">${count}</div>
+                    <div class="stat-label">${label} (${percentage}%)</div>
+                `;
+                wishesPerStudent.appendChild(div);
+            });
+            
+            // Kurstabelle
+            const tbody = document.getElementById('courseStatsTable').querySelector('tbody');
+            tbody.innerHTML = '';
+            
+            stats.courseStats.forEach(course => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${course.name}</td>
+                    <td><strong>${course.total}</strong></td>
+                    <td>${course.timeslot1}</td>
+                    <td>${course.timeslot2}</td>
+                    <td>${course.timeslot3}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+
+    <!-- Footer -->
+    <footer style="background: var(--md-sys-color-surface-container-highest); color: var(--md-sys-color-on-surface); border-top: 1px solid var(--md-sys-color-outline-variant);">
+        <div class="container" style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 24px; flex-wrap: wrap;">
+            <div style="font-size:14px; color:var(--md-sys-color-on-surface);">
+                © <span id="currentYear"></span> Paul Schoeneck
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size:14px; color:var(--md-sys-color-on-surface);">Powered by</span>
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Logo_Nutella.svg/250px-Logo_Nutella.svg.png" 
+                     alt="Nutella" 
+                     style="height: 32px; opacity: 0.85; transition: opacity 0.3s ease, transform 0.3s ease;"
+                     onmouseover="this.style.opacity='1'; this.style.transform='scale(1.1)';"
+                     onmouseout="this.style.opacity='0.85'; this.style.transform='scale(1)';"
+                     title="Powered by Nutella">
+                <span style="font-size: 20px;">🍫</span>
+            </div>
+            <div style="font-size:14px; color:var(--md-sys-color-on-surface);">
+                Support:
+                <a href="mailto:paul.schoeneck@gmx.de" style="color:var(--md-sys-color-primary); text-decoration:none; margin-left:6px;">paul.schoeneck@gmx.de</a>
+                <span style="margin:0 8px; color:var(--md-sys-color-on-surface-variant);">|</span>
+                <a href="tel:+4915773651660" style="color:var(--md-sys-color-primary); text-decoration:none;">+49&nbsp;1577&nbsp;3651660</a>
+            </div>
+        </div>
+    </footer>
+    
+    <script>
+        // Auto-update year in footer
+        document.getElementById('currentYear').textContent = new Date().getFullYear();
+    </script>
+
+</body>
+</html>
