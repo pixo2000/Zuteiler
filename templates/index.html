@@ -470,6 +470,41 @@
                 font-size: 18px;
             }
         }
+        
+        /* Tab Navigation */
+        .tab-button {
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: var(--md-sys-color-on-surface-variant);
+            cursor: pointer;
+            padding: 16px 24px;
+            font-size: 14px;
+            font-weight: 500;
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        
+        .tab-button:hover {
+            background-color: var(--md-sys-color-surface-container);
+            color: var(--md-sys-color-on-surface);
+        }
+        
+        .tab-button.active {
+            color: var(--md-sys-color-primary);
+            border-bottom-color: var(--md-sys-color-primary);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -477,15 +512,37 @@
     <div class="app-bar">
         <h1>
             <span class="material-symbols-outlined">school</span>
-            Methodentag - Kurszuteilung
+            Methodentag - Tools
         </h1>
         <button class="theme-toggle" onclick="toggleTheme()" title="Farbschema wechseln">
             <span class="material-symbols-outlined" id="themeIcon">light_mode</span>
         </button>
     </div>
     
+    <!-- Tab Navigation -->
+    <div style="background-color: var(--md-sys-color-surface); border-bottom: 1px solid var(--md-sys-color-outline-variant); position: sticky; top: 64px; z-index: 99;">
+        <div style="max-width: 1200px; margin: 0 auto; padding: 0 24px;">
+            <div style="display: flex; gap: 0;">
+                <button class="tab-button active" onclick="switchTab('kurszuteilung')">
+                    <span class="material-symbols-outlined">groups</span>
+                    Kurszuteilung
+                </button>
+                <button class="tab-button" onclick="switchTab('klassenzuteilung')">
+                    <span class="material-symbols-outlined">class</span>
+                    Klassenzuteilung
+                </button>
+                <button class="tab-button" onclick="switchTab('tool2')">
+                    <span class="material-symbols-outlined">construction</span>
+                    Tool 2
+                </button>
+            </div>
+        </div>
+    </div>
+    
     <!-- Main Container -->
     <div class="container">
+        <!-- Kurszuteilung Tab -->
+        <div id="tab-kurszuteilung" class="tab-content active">
         <!-- Anleitung Card -->
         <div class="card" style="background: linear-gradient(135deg, var(--md-sys-color-primary-container) 0%, var(--md-sys-color-secondary-container) 100%); border-left: 4px solid var(--md-sys-color-primary);">
             <h2>
@@ -771,12 +828,363 @@
                 </div>
             </div>
         </div>
+        </div>
+        <!-- End Kurszuteilung Tab -->
+        
+        <!-- Klassenzuteilung Tab -->
+        <div id="tab-klassenzuteilung" class="tab-content">
+            <!-- Anleitung Card -->
+            <div class="card" style="background: linear-gradient(135deg, var(--md-sys-color-primary-container) 0%, var(--md-sys-color-secondary-container) 100%); border-left: 4px solid var(--md-sys-color-primary);">
+                <h2>
+                    <span class="material-symbols-outlined">info</span>
+                    Klassenzuteilung - Anleitung
+                </h2>
+                <div style="color: var(--md-sys-color-on-primary-container); line-height: 1.8;">
+                    <p style="margin-bottom: 12px;"><strong>📋 Erforderliche Spalten in der Excel-Datei:</strong></p>
+                    <ul style="margin-left: 20px; margin-bottom: 16px;">
+                        <li><strong>Nachnamen</strong> und <strong>Vornamen</strong></li>
+                        <li><strong>Geschlecht</strong> (m/w)</li>
+                        <li><strong>extern / intern</strong> (intern, extern oder extern (Kreis))</li>
+                        <li><strong>2. FS</strong> - Fremdsprache (F, L, L0, Spa)</li>
+                        <li><strong>KU/MU</strong> - Kunst oder Musik (Ku, Mu)</li>
+                        <li><strong>bisherige Klasse</strong> (optional, nur für interne Schüler relevant)</li>
+                    </ul>
+                    <p><strong>⚠️ Rot markierte Zeilen werden ignoriert!</strong></p>
+                </div>
+            </div>
+            
+            <!-- Upload Card -->
+            <div class="card">
+                <h2>
+                    <span class="material-symbols-outlined">upload_file</span>
+                    1. Schülerliste hochladen
+                </h2>
+                <p style="margin-bottom: 16px; color: var(--md-sys-color-on-surface-variant);">
+                    Laden Sie die Excel-Datei (.xlsx) mit der Schülerliste hoch.
+                </p>
+                
+                <div style="margin-bottom: 16px;">
+                    <input type="file" id="klassenExcelFile" accept=".xlsx" style="display: none;" onchange="uploadKlassenFile()">
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="document.getElementById('klassenExcelFile').click()">
+                            <span class="material-symbols-outlined">folder_open</span>
+                            Datei auswählen
+                        </button>
+                        <button class="btn btn-secondary" onclick="clearKlassenData()" id="clearKlassenBtn" style="display: none;">
+                            <span class="material-symbols-outlined">delete</span>
+                            Daten löschen
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="klassenUploadStatus" class="hidden" style="margin-top: 16px;">
+                    <div id="klassenUploadSuccess" class="info-box" style="display: none; background-color: var(--md-sys-color-primary-container);">
+                        <span class="material-symbols-outlined" style="color: var(--md-sys-color-primary);">check_circle</span>
+                        <div>
+                            <strong>Datei erfolgreich hochgeladen!</strong><br>
+                            <span id="klassenUploadedFileName"></span>
+                        </div>
+                    </div>
+                    <div id="klassenUploadError" class="info-box" style="display: none; background-color: var(--md-sys-color-error-container);">
+                        <span class="material-symbols-outlined" style="color: var(--md-sys-color-error);">error</span>
+                        <div>
+                            <strong>Fehler beim Hochladen!</strong><br>
+                            <span id="klassenUploadErrorMessage"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Invalid Students Warning -->
+                <div id="invalidStudentsWarning" class="hidden" style="margin-top: 16px; padding: 16px; background-color: var(--md-sys-color-error-container); border-radius: 8px;">
+                    <h4 style="color: var(--md-sys-color-on-error-container); margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                        <span class="material-symbols-outlined">warning</span>
+                        Schüler mit unvollständigen Daten
+                    </h4>
+                    <p style="color: var(--md-sys-color-on-error-container); margin-bottom: 12px;">
+                        Die folgenden Schüler werden nicht zugeteilt, da Daten fehlen:
+                    </p>
+                    <div id="invalidStudentsList" style="max-height: 200px; overflow-y: auto;"></div>
+                </div>
+                
+                <!-- Statistiken -->
+                <div id="klassenStats" class="hidden" style="margin-top: 24px;">
+                    <h3 style="font-size: 16px; font-weight: 500; margin-bottom: 12px;">Übersicht</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="klassenStudentCount">-</div>
+                            <div class="stat-label">Schüler (gültig)</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="klassenMaleCount">-</div>
+                            <div class="stat-label">Männlich</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="klassenFemaleCount">-</div>
+                            <div class="stat-label">Weiblich</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="klassenInternCount">-</div>
+                            <div class="stat-label">Intern</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="klassenExternCount">-</div>
+                            <div class="stat-label">Extern</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Detaillierte Statistiken für Sprachen und Kunst/Musik -->
+                    <h3 style="font-size: 16px; font-weight: 500; margin: 24px 0 12px 0;">2. Fremdsprache</h3>
+                    <div id="klassenSprachenStats" class="stats-grid">
+                        <!-- Wird dynamisch gefüllt -->
+                    </div>
+                    
+                    <h3 style="font-size: 16px; font-weight: 500; margin: 24px 0 12px 0;">Kunst / Musik</h3>
+                    <div id="klassenKuMuStats" class="stats-grid">
+                        <!-- Wird dynamisch gefüllt -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Klassen-Konfiguration Card -->
+            <div id="klassenConfigCard" class="card hidden">
+                <h2>
+                    <span class="material-symbols-outlined">settings</span>
+                    2. Klassen konfigurieren
+                </h2>
+                
+                <div class="form-group">
+                    <label for="numClasses">Anzahl Klassen</label>
+                    <input type="number" id="numClasses" class="text-field" min="1" max="20" value="4" style="max-width: 200px;" onchange="updateClassConfigInputs()">
+                </div>
+                
+                <div style="margin: 16px 0; padding: 16px; background: var(--md-sys-color-primary-container); border-radius: 8px;">
+                    <h4 style="margin: 0 0 16px 0; color: var(--md-sys-color-on-primary-container); display: flex; align-items: center; gap: 8px;">
+                        <span class="material-symbols-outlined">auto_fix_high</span>
+                        Automatische Konfiguration
+                    </h4>
+                    
+                    <div style="margin-bottom: 16px;">
+                        <label style="font-size: 13px; color: var(--md-sys-color-on-primary-container); display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                            <span class="material-symbols-outlined" style="font-size: 20px;">group</span>
+                            Klassengröße: <strong id="classSizeLabel">27</strong> Schüler/Klasse
+                        </label>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span style="font-size: 12px; color: var(--md-sys-color-on-primary-container);">Klein (20)</span>
+                            <input type="range" id="classSizeSlider" min="20" max="35" value="27" 
+                                   style="flex: 1; accent-color: var(--md-sys-color-primary);" 
+                                   oninput="document.getElementById('classSizeLabel').textContent = this.value">
+                            <span style="font-size: 12px; color: var(--md-sys-color-on-primary-container);">Groß (35)</span>
+                        </div>
+                    </div>
+                    
+                    <button class="btn btn-secondary" onclick="suggestClassConfig()">
+                        <span class="material-symbols-outlined">auto_awesome</span>
+                        Vorschlag generieren
+                    </button>
+                </div>
+                
+                <div id="classConfigInputs" style="margin-top: 16px;">
+                    <!-- Wird dynamisch generiert -->
+                </div>
+                
+                <div style="margin-top: 24px;">
+                    <button class="btn btn-primary" id="startAssignmentBtn" onclick="startKlassenZuteilung()">
+                        <span class="material-symbols-outlined">play_arrow</span>
+                        Zuteilung starten
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Ergebnis Card -->
+            <div id="klassenResultCard" class="card hidden">
+                <h2>
+                    <span class="material-symbols-outlined">school</span>
+                    3. Klassenzuteilung
+                </h2>
+                <p style="margin-bottom: 16px; color: var(--md-sys-color-on-surface-variant);">
+                    Ziehen Sie Schüler per Drag & Drop zwischen den Klassen. Rechtsklick auf einen Schüler zeigt Details.
+                </p>
+                
+                <!-- Export Button -->
+                <div style="margin-bottom: 24px;">
+                    <button class="btn btn-secondary" onclick="exportKlassenZuteilung()">
+                        <span class="material-symbols-outlined">download</span>
+                        Als Excel exportieren
+                    </button>
+                </div>
+                
+                <!-- Klassen Container -->
+                <div id="klassenContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 16px;">
+                    <!-- Wird dynamisch generiert -->
+                </div>
+            </div>
+            
+            <!-- Kontextmenü für Schüler -->
+            <div id="studentContextMenu" class="hidden" style="position: fixed; background-color: var(--md-sys-color-surface-container-highest); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.3); padding: 16px; min-width: 280px; z-index: 1000;">
+                <h4 id="contextMenuTitle" style="margin-bottom: 12px; color: var(--md-sys-color-on-surface);">Schüler Info</h4>
+                <div id="contextMenuContent" style="color: var(--md-sys-color-on-surface-variant); font-size: 14px; line-height: 1.8;"></div>
+                <div style="margin-top: 16px; border-top: 1px solid var(--md-sys-color-outline-variant); padding-top: 12px;">
+                    <label style="font-size: 12px; color: var(--md-sys-color-on-surface-variant); display: block; margin-bottom: 4px;">Verschieben nach:</label>
+                    <select id="contextMenuMoveClass" class="text-field" style="padding: 8px; font-size: 14px;"></select>
+                    <button class="btn btn-primary" style="margin-top: 8px; width: 100%;" onclick="moveStudentFromContext()">
+                        <span class="material-symbols-outlined">move_item</span>
+                        Verschieben
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- End Klassenzuteilung Tab -->
+        
+        <!-- Tool 2 Tab -->
+        <div id="tab-tool2" class="tab-content">
+            <!-- Upload Card -->
+            <div class="card">
+                <h2>
+                    <span class="material-symbols-outlined">upload_file</span>
+                    Excel-Datei hochladen
+                </h2>
+                <p style="margin-bottom: 16px; color: var(--md-sys-color-on-surface-variant);">
+                    Laden Sie eine .xlsx Datei hoch. Alle rot markierten Zeilen werden automatisch entfernt.
+                </p>
+                
+                <div style="margin-bottom: 16px;">
+                    <input type="file" id="excelFile" accept=".xlsx" style="display: none;" onchange="uploadExcelFile()">
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="document.getElementById('excelFile').click()">
+                            <span class="material-symbols-outlined">folder_open</span>
+                            Datei auswählen
+                        </button>
+                        <button class="btn btn-secondary" onclick="clearExcelData()" id="clearExcelBtn" style="display: none;">
+                            <span class="material-symbols-outlined">delete</span>
+                            Daten löschen
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="excelUploadStatus" class="hidden" style="margin-top: 16px;">
+                    <div id="excelUploadSuccess" class="info-box" style="display: none; background-color: var(--md-sys-color-primary-container);">
+                        <span class="material-symbols-outlined" style="color: var(--md-sys-color-primary);">check_circle</span>
+                        <div>
+                            <strong>Datei erfolgreich hochgeladen!</strong><br>
+                            <span id="excelUploadedFileName"></span>
+                        </div>
+                    </div>
+                    <div id="excelUploadError" class="info-box" style="display: none; background-color: var(--md-sys-color-error-container);">
+                        <span class="material-symbols-outlined" style="color: var(--md-sys-color-error);">error</span>
+                        <div>
+                            <strong>Fehler beim Hochladen!</strong><br>
+                            <span id="excelErrorMessage"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Data Table Card -->
+            <div class="card" id="excelDataCard" style="display: none;">
+                <h2>
+                    <span class="material-symbols-outlined">table_view</span>
+                    Schülerliste
+                </h2>
+                <div class="table-container">
+                    <table id="excelDataTable">
+                        <thead>
+                            <tr>
+                                <th>Vorname</th>
+                                <th>Nachname</th>
+                            </tr>
+                        </thead>
+                        <tbody id="excelTableBody">
+                            <!-- Data will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <!-- End Tool 2 Tab -->
     </div>
+    <!-- End Container -->
     
     <script>
         let coursesList = [];
         let countdownInterval = null;
         let deleteTimestamp = null;
+        
+        // Excel File Upload Functions
+        function uploadExcelFile() {
+            const fileInput = document.getElementById('excelFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            // Show loading state
+            document.getElementById('excelUploadSuccess').style.display = 'none';
+            document.getElementById('excelUploadError').style.display = 'none';
+            document.getElementById('excelDataCard').style.display = 'none';
+            
+            fetch('/upload_excel', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    document.getElementById('excelUploadedFileName').textContent = file.name;
+                    document.getElementById('excelUploadSuccess').style.display = 'flex';
+                    document.getElementById('excelUploadStatus').classList.remove('hidden');
+                    document.getElementById('clearExcelBtn').style.display = 'inline-flex';
+                    
+                    // Display the data in table
+                    displayExcelData(data.data);
+                } else {
+                    // Show error message
+                    document.getElementById('excelErrorMessage').textContent = data.error || 'Unbekannter Fehler';
+                    document.getElementById('excelUploadError').style.display = 'flex';
+                    document.getElementById('excelUploadStatus').classList.remove('hidden');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('excelErrorMessage').textContent = 'Verbindungsfehler: ' + error.message;
+                document.getElementById('excelUploadError').style.display = 'flex';
+                document.getElementById('excelUploadStatus').classList.remove('hidden');
+            });
+        }
+        
+        function displayExcelData(data) {
+            const tableBody = document.getElementById('excelTableBody');
+            tableBody.innerHTML = '';
+            
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                const tdVorname = document.createElement('td');
+                const tdNachname = document.createElement('td');
+                
+                tdVorname.textContent = row.Vorname || '';
+                tdNachname.textContent = row.Nachname || '';
+                
+                tr.appendChild(tdVorname);
+                tr.appendChild(tdNachname);
+                tableBody.appendChild(tr);
+            });
+            
+            document.getElementById('excelDataCard').style.display = 'block';
+        }
+        
+        function clearExcelData() {
+            document.getElementById('excelFile').value = '';
+            document.getElementById('excelUploadStatus').classList.add('hidden');
+            document.getElementById('excelUploadSuccess').style.display = 'none';
+            document.getElementById('excelUploadError').style.display = 'none';
+            document.getElementById('excelDataCard').style.display = 'none';
+            document.getElementById('clearExcelBtn').style.display = 'none';
+            document.getElementById('excelTableBody').innerHTML = '';
+        }
         
         // Theme Management
         function initTheme() {
@@ -804,8 +1212,47 @@
             }
         }
         
+        // Tab Management
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById('tab-' + tabName).classList.add('active');
+            
+            // Add active class to selected tab button
+            event.target.closest('.tab-button').classList.add('active');
+            
+            // Save selected tab to localStorage
+            localStorage.setItem('activeTab', tabName);
+        }
+        
+        // Init tabs on page load
+        function initTabs() {
+            const savedTab = localStorage.getItem('activeTab') || 'kurszuteilung';
+            const tabButtons = document.querySelectorAll('.tab-button');
+            
+            // Find and click the saved tab button
+            tabButtons.forEach(btn => {
+                const btnText = btn.textContent.toLowerCase();
+                if ((savedTab === 'kurszuteilung' && btnText.includes('kurszuteilung')) ||
+                    (savedTab === 'klassenzuteilung' && btnText.includes('klassenzuteilung')) ||
+                    (savedTab === 'tool2' && btnText.includes('tool 2'))) {
+                    btn.click();
+                }
+            });
+        }
+        
         // Init theme on page load
         initTheme();
+        initTabs();
         
         // Countdown Management
         async function fetchDeleteTimestamp() {
@@ -1232,6 +1679,515 @@
                 tbody.appendChild(tr);
             });
         }
+        
+        // ============================================================================
+        // KLASSENZUTEILUNG FUNKTIONEN
+        // ============================================================================
+        
+        let klassenData = {
+            students: [],
+            classes: [],
+            classConfig: [],
+            selectedStudentId: null,
+            uploadStats: null  // Speichere Upload-Statistiken
+        };
+        
+        async function uploadKlassenFile() {
+            const fileInput = document.getElementById('klassenExcelFile');
+            const file = fileInput.files[0];
+            
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            document.getElementById('klassenUploadSuccess').style.display = 'none';
+            document.getElementById('klassenUploadError').style.display = 'none';
+            document.getElementById('invalidStudentsWarning').classList.add('hidden');
+            document.getElementById('klassenStats').classList.add('hidden');
+            document.getElementById('klassenConfigCard').classList.add('hidden');
+            document.getElementById('klassenResultCard').classList.add('hidden');
+            
+            try {
+                const response = await fetch('/api/klassenzuteilung/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('klassenUploadedFileName').textContent = 
+                        `${data.filename} (${data.studentCount} gültige Schüler)`;
+                    document.getElementById('klassenUploadSuccess').style.display = 'flex';
+                    document.getElementById('klassenUploadStatus').classList.remove('hidden');
+                    document.getElementById('clearKlassenBtn').style.display = 'inline-flex';
+                    
+                    // Statistiken anzeigen
+                    document.getElementById('klassenStudentCount').textContent = data.studentCount;
+                    document.getElementById('klassenMaleCount').textContent = data.stats.male;
+                    document.getElementById('klassenFemaleCount').textContent = data.stats.female;
+                    document.getElementById('klassenInternCount').textContent = data.stats.intern;
+                    document.getElementById('klassenExternCount').textContent = data.stats.extern;
+                    
+                    // Sprachen-Statistiken anzeigen
+                    const sprachenContainer = document.getElementById('klassenSprachenStats');
+                    sprachenContainer.innerHTML = '';
+                    const sprachLabels = { 'L': 'Latein', 'L0': 'Latein 0', 'F': 'Französisch', 'Spa': 'Spanisch' };
+                    Object.entries(data.stats.languages || {}).forEach(([lang, count]) => {
+                        const div = document.createElement('div');
+                        div.className = 'stat-card';
+                        div.innerHTML = `
+                            <div class="stat-value">${count}</div>
+                            <div class="stat-label">${sprachLabels[lang] || lang}</div>
+                        `;
+                        sprachenContainer.appendChild(div);
+                    });
+                    
+                    // Kunst/Musik-Statistiken anzeigen
+                    const kumuContainer = document.getElementById('klassenKuMuStats');
+                    kumuContainer.innerHTML = '';
+                    const kumuIcons = { 'Ku': 'palette', 'Mu': 'music_note' };
+                    const kumuLabels = { 'Ku': 'Kunst', 'Mu': 'Musik' };
+                    Object.entries(data.stats.kunstMusik || {}).forEach(([km, count]) => {
+                        const div = document.createElement('div');
+                        div.className = 'stat-card';
+                        div.innerHTML = `
+                            <div class="stat-value">${count}</div>
+                            <div class="stat-label" style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                <span class="material-symbols-outlined" style="font-size: 18px;">${kumuIcons[km] || 'help'}</span>
+                                ${kumuLabels[km] || km}
+                            </div>
+                        `;
+                        kumuContainer.appendChild(div);
+                    });
+                    
+                    document.getElementById('klassenStats').classList.remove('hidden');
+                    
+                    // Speichere Stats für Vorschläge
+                    klassenData.uploadStats = data.stats;
+                    klassenData.students = data.studentCount;
+                    
+                    // Ungültige Schüler anzeigen
+                    if (data.invalidCount > 0) {
+                        const list = document.getElementById('invalidStudentsList');
+                        list.innerHTML = data.invalidStudents.map(s => `
+                            <div style="padding: 8px; margin-bottom: 4px; background: rgba(255,255,255,0.1); border-radius: 4px;">
+                                <strong>Zeile ${s.row}:</strong> ${s.vorname} ${s.nachname} 
+                                <span style="opacity: 0.7;">(fehlt: ${s.missing_fields.join(', ')})</span>
+                            </div>
+                        `).join('');
+                        document.getElementById('invalidStudentsWarning').classList.remove('hidden');
+                    }
+                    
+                    // Klassen-Konfiguration anzeigen
+                    document.getElementById('klassenConfigCard').classList.remove('hidden');
+                    updateClassConfigInputs();
+                } else {
+                    document.getElementById('klassenUploadErrorMessage').textContent = data.error;
+                    document.getElementById('klassenUploadError').style.display = 'flex';
+                    document.getElementById('klassenUploadStatus').classList.remove('hidden');
+                }
+            } catch (error) {
+                document.getElementById('klassenUploadErrorMessage').textContent = error.message;
+                document.getElementById('klassenUploadError').style.display = 'flex';
+                document.getElementById('klassenUploadStatus').classList.remove('hidden');
+            }
+        }
+        
+        function suggestClassConfig() {
+            if (!klassenData.uploadStats) {
+                alert('Bitte zuerst eine Datei hochladen');
+                return;
+            }
+            
+            const stats = klassenData.uploadStats;
+            const kuCount = stats.kunstMusik?.Ku || 0;
+            const muCount = stats.kunstMusik?.Mu || 0;
+            const totalStudents = klassenData.students;
+            
+            // Berechne optimale Klassenanzahl basierend auf Slider
+            const idealClassSize = parseInt(document.getElementById('classSizeSlider').value) || 27;
+            let suggestedNumClasses = Math.round(totalStudents / idealClassSize);
+            suggestedNumClasses = Math.max(2, Math.min(suggestedNumClasses, 20));
+            
+            // Berechne Kunst/Musik-Klassen basierend auf Verhältnis
+            const kuRatio = kuCount / totalStudents;
+            const muRatio = muCount / totalStudents;
+            
+            let kuClasses = Math.round(suggestedNumClasses * kuRatio);
+            let muClasses = Math.round(suggestedNumClasses * muRatio);
+            
+            // Stelle sicher, dass mindestens 1 Klasse pro Typ wenn Schüler vorhanden
+            if (kuCount > 0 && kuClasses < 1) kuClasses = 1;
+            if (muCount > 0 && muClasses < 1) muClasses = 1;
+            
+            // Korrigiere falls zu viele
+            while (kuClasses + muClasses > suggestedNumClasses) {
+                if (kuClasses > muClasses) kuClasses--;
+                else muClasses--;
+            }
+            while (kuClasses + muClasses < suggestedNumClasses) {
+                if (kuCount / kuClasses > muCount / muClasses) kuClasses++;
+                else muClasses++;
+            }
+            
+            // Setze Anzahl Klassen
+            document.getElementById('numClasses').value = suggestedNumClasses;
+            updateClassConfigInputs();
+            
+            // Setze Kunst/Musik für jede Klasse
+            let classIndex = 0;
+            for (let i = 0; i < kuClasses; i++) {
+                const kmInput = document.querySelector(`.class-km-input[data-class="${classIndex}"]`);
+                if (kmInput) kmInput.value = 'Ku';
+                classIndex++;
+            }
+            for (let i = 0; i < muClasses; i++) {
+                const kmInput = document.querySelector(`.class-km-input[data-class="${classIndex}"]`);
+                if (kmInput) kmInput.value = 'Mu';
+                classIndex++;
+            }
+            
+            // Info-Meldung
+            alert(`Vorschlag: ${suggestedNumClasses} Klassen\n\nKunst: ${kuClasses} Klassen (für ${kuCount} Schüler)\nMusik: ${muClasses} Klassen (für ${muCount} Schüler)\n\nDurchschnittliche Klassengröße: ~${Math.round(totalStudents / suggestedNumClasses)} Schüler`);
+        }
+        
+        function updateClassConfigInputs() {
+            const numClasses = parseInt(document.getElementById('numClasses').value) || 4;
+            const container = document.getElementById('classConfigInputs');
+            
+            container.innerHTML = '';
+            
+            for (let i = 0; i < numClasses; i++) {
+                const div = document.createElement('div');
+                div.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; padding: 16px; background: var(--md-sys-color-surface-container-high); border-radius: 8px;';
+                div.innerHTML = `
+                    <div>
+                        <label style="font-size: 12px; color: var(--md-sys-color-on-surface-variant); display: block; margin-bottom: 4px;">Klassenname</label>
+                        <input type="text" class="text-field class-name-input" data-class="${i}" value="Klasse ${i + 1}" style="padding: 8px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 12px; color: var(--md-sys-color-on-surface-variant); display: block; margin-bottom: 4px;">Sprachfokus</label>
+                        <select class="text-field class-lang-input" data-class="${i}" style="padding: 8px;">
+                            <option value="">Kein Fokus</option>
+                            <option value="L">Latein (Fortgeschritten)</option>
+                            <option value="L0">Latein 0 (Neuanfänger)</option>
+                            <option value="L_all">Latein (alle)</option>
+                            <option value="F">Französisch</option>
+                            <option value="Spa">Spanisch</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 12px; color: var(--md-sys-color-on-surface-variant); display: block; margin-bottom: 4px;">Kunst/Musik *</label>
+                        <select class="text-field class-km-input" data-class="${i}" style="padding: 8px;" required>
+                            <option value="" disabled selected>-- Bitte wählen --</option>
+                            <option value="Ku">Kunst</option>
+                            <option value="Mu">Musik</option>
+                        </select>
+                    </div>
+                `;
+                container.appendChild(div);
+            }
+        }
+        
+        async function startKlassenZuteilung() {
+            // Prüfe ob alle Kunst/Musik-Felder ausgefüllt sind
+            const numClasses = parseInt(document.getElementById('numClasses').value) || 4;
+            for (let i = 0; i < numClasses; i++) {
+                const kmInput = document.querySelector(`.class-km-input[data-class="${i}"]`);
+                if (!kmInput || !kmInput.value) {
+                    alert(`Bitte wählen Sie für alle Klassen Kunst oder Musik aus!\n\nKlasse ${i + 1} hat noch keine Auswahl.`);
+                    return;
+                }
+            }
+            
+            // Sammle Klassenkonfiguration
+            const classConfigs = [];
+            
+            for (let i = 0; i < numClasses; i++) {
+                const nameInput = document.querySelector(`.class-name-input[data-class="${i}"]`);
+                const langInput = document.querySelector(`.class-lang-input[data-class="${i}"]`);
+                const kmInput = document.querySelector(`.class-km-input[data-class="${i}"]`);
+                
+                classConfigs.push({
+                    name: nameInput ? nameInput.value : `Klasse ${i + 1}`,
+                    language_focus: langInput ? langInput.value : '',
+                    art_music: kmInput ? kmInput.value : ''
+                });
+            }
+            
+            try {
+                // Konfiguriere Klassen
+                await fetch('/api/klassenzuteilung/configure', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ classes: classConfigs })
+                });
+                
+                // Führe Zuteilung durch
+                const response = await fetch('/api/klassenzuteilung/assign', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    klassenData.classes = data.classes;
+                    klassenData.classConfig = classConfigs;
+                    displayKlassenResult(data.classes);
+                    document.getElementById('klassenResultCard').classList.remove('hidden');
+                    document.getElementById('klassenResultCard').scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    alert('Fehler: ' + data.error);
+                }
+            } catch (error) {
+                alert('Fehler bei der Zuteilung: ' + error.message);
+            }
+        }
+        
+        function displayKlassenResult(classes) {
+            const container = document.getElementById('klassenContainer');
+            container.innerHTML = '';
+            
+            classes.forEach((cls, idx) => {
+                const classDiv = document.createElement('div');
+                classDiv.className = 'klasse-box';
+                classDiv.dataset.classId = cls.id;
+                classDiv.style.cssText = 'background: var(--md-sys-color-surface-container); border-radius: 12px; padding: 16px; border: 2px solid var(--md-sys-color-outline-variant);';
+                
+                // Berechne Prozentsätze
+                const malePercent = cls.total > 0 ? ((cls.male / cls.total) * 100).toFixed(0) : 0;
+                const externPercent = cls.total > 0 ? ((cls.extern / cls.total) * 100).toFixed(0) : 0;
+                
+                // Sprachstatistik
+                const langStats = Object.entries(cls.languages || {}).map(([lang, count]) => `${lang}: ${count}`).join(', ') || '-';
+                
+                classDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h3 style="margin: 0; color: var(--md-sys-color-on-surface);">${cls.name}</h3>
+                        <span style="background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); padding: 4px 12px; border-radius: 12px; font-size: 14px;">${cls.total} Schüler</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; font-size: 13px; color: var(--md-sys-color-on-surface-variant);">
+                        <div>♂ ${cls.male} / ♀ ${cls.female} (${malePercent}% m)</div>
+                        <div>Extern: ${cls.extern} (${externPercent}%)</div>
+                        <div>Sprachen: ${langStats}</div>
+                        <div>${cls.language_focus ? 'Fokus: ' + cls.language_focus : ''} ${cls.art_music ? '| ' + cls.art_music : ''}</div>
+                    </div>
+                    <div class="student-list" data-class-id="${cls.id}" 
+                         style="max-height: 300px; overflow-y: auto; background: var(--md-sys-color-surface); border-radius: 8px; padding: 8px;"
+                         ondragover="handleDragOver(event)" ondrop="handleDrop(event, ${cls.id})">
+                        ${cls.students.map(s => `
+                            <div class="student-item" 
+                                 draggable="true" 
+                                 data-student-id="${s.id}"
+                                 ondragstart="handleDragStart(event, ${s.id})"
+                                 oncontextmenu="showStudentContext(event, ${s.id})"
+                                 style="padding: 8px 12px; margin: 4px 0; background: var(--md-sys-color-surface-container-high); border-radius: 6px; cursor: grab; display: flex; justify-content: space-between; align-items: center; font-size: 14px; transition: all 0.2s;"
+                                 onmouseover="this.style.background='var(--md-sys-color-primary-container)'"
+                                 onmouseout="this.style.background='var(--md-sys-color-surface-container-high)'">
+                                <span>${s.nachname}, ${s.vorname}</span>
+                                <span style="font-size: 12px; color: var(--md-sys-color-on-surface-variant);">
+                                    ${s.geschlecht === 'm' ? '♂' : '♀'} | ${s.fremdsprache || '-'} | ${s.kunst_musik || '-'}
+                                </span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(classDiv);
+            });
+        }
+        
+        let draggedStudentId = null;
+        
+        function handleDragStart(event, studentId) {
+            draggedStudentId = studentId;
+            event.dataTransfer.effectAllowed = 'move';
+            event.target.style.opacity = '0.5';
+        }
+        
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+        }
+        
+        async function handleDrop(event, targetClassId) {
+            event.preventDefault();
+            
+            if (draggedStudentId === null) return;
+            
+            try {
+                const response = await fetch('/api/klassenzuteilung/move', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        studentId: draggedStudentId,
+                        targetClass: targetClassId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    klassenData.classes = data.classes;
+                    displayKlassenResult(data.classes);
+                } else {
+                    alert('Fehler: ' + data.error);
+                }
+            } catch (error) {
+                alert('Fehler beim Verschieben: ' + error.message);
+            }
+            
+            draggedStudentId = null;
+        }
+        
+        function showStudentContext(event, studentId) {
+            event.preventDefault();
+            
+            // Finde Schüler
+            let student = null;
+            for (const cls of klassenData.classes) {
+                const found = cls.students.find(s => s.id === studentId);
+                if (found) {
+                    student = found;
+                    break;
+                }
+            }
+            
+            if (!student) return;
+            
+            klassenData.selectedStudentId = studentId;
+            
+            const menu = document.getElementById('studentContextMenu');
+            const title = document.getElementById('contextMenuTitle');
+            const content = document.getElementById('contextMenuContent');
+            const moveSelect = document.getElementById('contextMenuMoveClass');
+            
+            title.textContent = `${student.vorname} ${student.nachname}`;
+            content.innerHTML = `
+                <div><strong>Geschlecht:</strong> ${student.geschlecht === 'm' ? 'Männlich' : 'Weiblich'}</div>
+                <div><strong>Status:</strong> ${student.intern_extern === 'intern' ? 'Intern' : 'Extern'}</div>
+                <div><strong>2. Fremdsprache:</strong> ${student.fremdsprache || '-'}</div>
+                <div><strong>Kunst/Musik:</strong> ${student.kunst_musik || '-'}</div>
+                <div><strong>Bisherige Klasse:</strong> ${student.bisherige_klasse || '-'}</div>
+                <div><strong>Aktuelle Klasse:</strong> ${klassenData.classes.find(c => c.id === student.assigned_class)?.name || '-'}</div>
+            `;
+            
+            // Fülle Dropdown
+            moveSelect.innerHTML = klassenData.classes.map(c => 
+                `<option value="${c.id}" ${c.id === student.assigned_class ? 'selected' : ''}>${c.name}</option>`
+            ).join('');
+            
+            // Positioniere Menü
+            menu.style.left = event.pageX + 'px';
+            menu.style.top = event.pageY + 'px';
+            menu.classList.remove('hidden');
+            
+            // Schließe bei Klick außerhalb
+            setTimeout(() => {
+                document.addEventListener('click', closeStudentContext);
+            }, 100);
+        }
+        
+        function closeStudentContext() {
+            document.getElementById('studentContextMenu').classList.add('hidden');
+            document.removeEventListener('click', closeStudentContext);
+        }
+        
+        async function moveStudentFromContext() {
+            const targetClass = parseInt(document.getElementById('contextMenuMoveClass').value);
+            const studentId = klassenData.selectedStudentId;
+            
+            if (studentId === null) return;
+            
+            try {
+                const response = await fetch('/api/klassenzuteilung/move', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        studentId: studentId,
+                        targetClass: targetClass
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    klassenData.classes = data.classes;
+                    displayKlassenResult(data.classes);
+                    closeStudentContext();
+                } else {
+                    alert('Fehler: ' + data.error);
+                }
+            } catch (error) {
+                alert('Fehler beim Verschieben: ' + error.message);
+            }
+        }
+        
+        async function exportKlassenZuteilung() {
+            window.location.href = '/api/klassenzuteilung/export';
+        }
+        
+        async function clearKlassenData() {
+            if (!confirm('Möchten Sie wirklich alle Klassenzuteilungs-Daten löschen?')) return;
+            
+            try {
+                await fetch('/api/klassenzuteilung/clear', { method: 'POST' });
+                
+                document.getElementById('klassenExcelFile').value = '';
+                document.getElementById('klassenUploadStatus').classList.add('hidden');
+                document.getElementById('klassenUploadSuccess').style.display = 'none';
+                document.getElementById('klassenUploadError').style.display = 'none';
+                document.getElementById('invalidStudentsWarning').classList.add('hidden');
+                document.getElementById('klassenStats').classList.add('hidden');
+                document.getElementById('klassenConfigCard').classList.add('hidden');
+                document.getElementById('klassenResultCard').classList.add('hidden');
+                document.getElementById('clearKlassenBtn').style.display = 'none';
+                
+                klassenData = {
+                    students: [],
+                    classes: [],
+                    classConfig: [],
+                    selectedStudentId: null
+                };
+            } catch (error) {
+                alert('Fehler beim Löschen: ' + error.message);
+            }
+        }
+        
+        // Tab-Initialisierung für Klassenzuteilung
+        function initKlassenTab() {
+            updateClassConfigInputs();
+        }
+        
+        // Rufe bei Tab-Wechsel auf
+        const originalSwitchTab = switchTab;
+        switchTab = function(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById('tab-' + tabName).classList.add('active');
+            
+            // Add active class to selected tab button
+            event.target.closest('.tab-button').classList.add('active');
+            
+            // Save selected tab to localStorage
+            localStorage.setItem('activeTab', tabName);
+            
+            // Init Klassenzuteilung Tab wenn nötig
+            if (tabName === 'klassenzuteilung') {
+                initKlassenTab();
+            }
+        };
     </script>
 
     <!-- Footer -->

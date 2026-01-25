@@ -4,7 +4,7 @@ import sys
 import csv
 from main import Student, Course, assign_students_to_courses, export_results, export_summary_txt
 import io
-from collections import Counter
+from collections import Counter, defaultdict
 from datetime import datetime
 import pandas as pd
 import random
@@ -15,8 +15,18 @@ import atexit
 import shutil
 import threading
 import webbrowser
+from openpyxl import load_workbook
+from openpyxl.styles import PatternFill
 
 app = Flask(__name__)
+
+# Globale Variable für Klassenzuteilung
+class_assignment_data = {
+    'students': [],        # Liste aller Schüler
+    'classes': {},         # Klassen-Zuteilung: class_id -> [student_ids]
+    'class_config': [],    # Klassenkonfiguration: [{id, name, language_focus, art_music}]
+    'invalid_students': [] # Schüler mit unvollständigen Daten (rot markiert)
+}
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -489,6 +499,734 @@ def get_delete_timestamp():
         'autoDeleteMinutes': AUTO_DELETE_MINUTES,
         'ramOnlyMode': IS_RAM_ONLY_MODE
     })
+
+# ============================================================================
+# KLASSENZUTEILUNG API
+# ============================================================================
+
+@app.route('/api/klassenzuteilung/upload', methods=['POST'])
+def upload_class_list():
+    """Lädt eine Excel-Datei mit Schülerliste für Klassenzuteilung hoch"""
+    global class_assignment_data
+    
+    try:
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'error': 'Keine Datei hochgeladen'}), 400
+        
+        file = request.files['file']
+        
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'Keine Datei ausgewählt'}), 400
+        
+        if not file.filename.endswith('.xlsx'):
+            return jsonify({'success': False, 'error': 'Nur .xlsx Dateien werden unterstützt'}), 400
+        
+        # Load the workbook
+        wb = load_workbook(file, data_only=False)
+        ws = wb.active
+        
+        # Finde alle relevanten Spalten in der ersten Zeile
+        column_mapping = {}
+        required_columns = ['nachnamen', 'vornamen', 'geschlecht', 'extern / intern ', '2. FS', 'ku/mu']
+        optional_columns = ['bisherige klasse']
+        
+        first_row = list(ws[1])
+        for col_idx, cell in enumerate(first_row, start=1):
+            if cell.value:
+                cell_value = str(cell.value).strip().lower()
+                # Exakte Matches oder enthält
+                if 'nachnamen' in cell_value or cell_value == 'nachname':
+                    column_mapping['nachname'] = col_idx
+                elif 'vornamen' in cell_value or cell_value == 'vorname':
+                    column_mapping['vorname'] = col_idx
+                elif 'geschlecht' in cell_value:
+                    column_mapping['geschlecht'] = col_idx
+                elif 'extern' in cell_value and 'intern' in cell_value:
+                    # Matches "extern / intern", "intern / extern", "extern/intern", etc.
+                    column_mapping['intern_extern'] = col_idx
+                elif '2. fs' in cell_value or '2.fs' in cell_value or '2. fa' in cell_value or '2.fa' in cell_value or 'fremdsprache' in cell_value:
+                    column_mapping['fremdsprache'] = col_idx
+                elif 'ku/mu' in cell_value or cell_value == 'kumu' or cell_value == 'ku / mu':
+                    column_mapping['kunst_musik'] = col_idx
+                elif 'bisherige klasse' in cell_value or ('klasse' in cell_value and 'bisherige' in cell_value):
+                    column_mapping['bisherige_klasse'] = col_idx
+        
+        # Prüfe ob alle erforderlichen Spalten vorhanden sind
+        missing = []
+        if 'nachname' not in column_mapping:
+            missing.append('Nachnamen')
+        if 'vorname' not in column_mapping:
+            missing.append('Vornamen')
+        if 'geschlecht' not in column_mapping:
+            missing.append('Geschlecht')
+        if 'intern_extern' not in column_mapping:
+            missing.append('extern / intern')
+        if 'fremdsprache' not in column_mapping:
+            missing.append('2. FS')
+        if 'kunst_musik' not in column_mapping:
+            missing.append('KU/MU')
+        
+        if missing:
+            return jsonify({
+                'success': False, 
+                'error': f'Fehlende Spalten in Zeile 1: {", ".join(missing)}'
+            }), 400
+        
+        students = []
+        invalid_students = []
+        student_id = 0
+        
+        for row_num, row in enumerate(ws.iter_rows(min_row=2), start=2):
+            # Prüfe ob Zeile rot markiert ist
+            is_red = False
+            for cell in row:
+                if cell.fill and cell.fill.start_color:
+                    color = cell.fill.start_color
+                    if hasattr(color, 'rgb') and color.rgb:
+                        rgb_str = str(color.rgb)
+                        if len(rgb_str) == 8:
+                            rgb_str = rgb_str[2:]
+                        try:
+                            r = int(rgb_str[0:2], 16)
+                            g = int(rgb_str[2:4], 16)
+                            b = int(rgb_str[4:6], 16)
+                            if r > 180 and r > (g + 50) and r > (b + 50):
+                                is_red = True
+                                break
+                        except (ValueError, IndexError):
+                            pass
+            
+            if is_red:
+                continue  # Überspringe rot markierte Zeilen
+            
+            # Extrahiere Daten
+            def get_cell_value(col_name):
+                if col_name in column_mapping:
+                    idx = column_mapping[col_name] - 1
+                    if idx < len(row) and row[idx].value:
+                        return str(row[idx].value).strip()
+                return ''
+            
+            nachname = get_cell_value('nachname')
+            vorname = get_cell_value('vorname')
+            geschlecht = get_cell_value('geschlecht').lower()
+            intern_extern = get_cell_value('intern_extern').lower()
+            fremdsprache = get_cell_value('fremdsprache')
+            kunst_musik = get_cell_value('kunst_musik')
+            bisherige_klasse = get_cell_value('bisherige_klasse')
+            
+            # Überspringe leere Zeilen
+            if not nachname and not vorname:
+                continue
+            
+            # Normalisiere Werte
+            if geschlecht in ['m', 'männlich', 'male']:
+                geschlecht = 'm'
+            elif geschlecht in ['w', 'weiblich', 'female', 'f']:
+                geschlecht = 'w'
+            else:
+                geschlecht = ''
+            
+            # Normalisiere intern/extern
+            if 'intern' in intern_extern and 'extern' not in intern_extern:
+                intern_extern_normalized = 'intern'
+            elif 'extern' in intern_extern:
+                intern_extern_normalized = 'extern'
+            else:
+                intern_extern_normalized = ''
+            
+            # Normalisiere Fremdsprache
+            fremdsprache_upper = fremdsprache.upper() if fremdsprache else ''
+            if fremdsprache_upper in ['F', 'FRANZÖSISCH', 'FRANZ']:
+                fremdsprache = 'F'
+            elif fremdsprache_upper in ['L', 'LATEIN']:
+                fremdsprache = 'L'
+            elif fremdsprache_upper in ['L0', 'LATEIN0']:
+                fremdsprache = 'L0'
+            elif fremdsprache_upper in ['SPA', 'SPANISCH']:
+                fremdsprache = 'Spa'
+            else:
+                fremdsprache = fremdsprache if fremdsprache else ''
+            
+            # Normalisiere Kunst/Musik
+            kunst_musik_lower = kunst_musik.lower() if kunst_musik else ''
+            if kunst_musik_lower in ['ku', 'kunst']:
+                kunst_musik = 'Ku'
+            elif kunst_musik_lower in ['mu', 'musik']:
+                kunst_musik = 'Mu'
+            else:
+                kunst_musik = kunst_musik if kunst_musik else ''
+            
+            student = {
+                'id': student_id,
+                'row': row_num,
+                'nachname': nachname,
+                'vorname': vorname,
+                'geschlecht': geschlecht,
+                'intern_extern': intern_extern_normalized,
+                'fremdsprache': fremdsprache,
+                'kunst_musik': kunst_musik,
+                'bisherige_klasse': bisherige_klasse,
+                'assigned_class': None
+            }
+            
+            # Prüfe ob alle erforderlichen Felder vorhanden sind
+            is_valid = True
+            missing_fields = []
+            
+            if not nachname:
+                missing_fields.append('Nachname')
+                is_valid = False
+            if not vorname:
+                missing_fields.append('Vorname')
+                is_valid = False
+            if not geschlecht:
+                missing_fields.append('Geschlecht')
+                is_valid = False
+            if not intern_extern_normalized:
+                missing_fields.append('intern/extern')
+                is_valid = False
+            if not kunst_musik:
+                missing_fields.append('KU/MU')
+                is_valid = False
+            
+            if is_valid:
+                students.append(student)
+            else:
+                student['missing_fields'] = missing_fields
+                invalid_students.append(student)
+            
+            student_id += 1
+        
+        # Statistiken berechnen
+        male_count = sum(1 for s in students if s['geschlecht'] == 'm')
+        female_count = sum(1 for s in students if s['geschlecht'] == 'w')
+        intern_count = sum(1 for s in students if s['intern_extern'] == 'intern')
+        extern_count = sum(1 for s in students if s['intern_extern'] == 'extern')
+        
+        # Fremdsprachen-Statistik
+        language_stats = defaultdict(int)
+        for s in students:
+            if s['fremdsprache']:
+                language_stats[s['fremdsprache']] += 1
+        
+        # Kunst/Musik-Statistik
+        km_stats = defaultdict(int)
+        for s in students:
+            if s['kunst_musik']:
+                km_stats[s['kunst_musik']] += 1
+        
+        # Speichere Daten
+        class_assignment_data['students'] = students
+        class_assignment_data['invalid_students'] = invalid_students
+        class_assignment_data['classes'] = {}
+        class_assignment_data['class_config'] = []
+        
+        return jsonify({
+            'success': True,
+            'filename': file.filename,
+            'studentCount': len(students),
+            'invalidCount': len(invalid_students),
+            'invalidStudents': invalid_students,
+            'stats': {
+                'male': male_count,
+                'female': female_count,
+                'intern': intern_count,
+                'extern': extern_count,
+                'languages': dict(language_stats),
+                'kunstMusik': dict(km_stats)
+            }
+        })
+    
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/klassenzuteilung/configure', methods=['POST'])
+def configure_classes():
+    """Konfiguriert die Klassen (Anzahl, Sprachfokus, Kunst/Musik)"""
+    global class_assignment_data
+    
+    try:
+        data = request.get_json()
+        class_configs = data.get('classes', [])
+        
+        if not class_configs:
+            return jsonify({'success': False, 'error': 'Keine Klassenkonfiguration angegeben'}), 400
+        
+        # Validiere Konfiguration
+        for i, config in enumerate(class_configs):
+            if 'name' not in config:
+                config['name'] = f'Klasse {i + 1}'
+            if 'language_focus' not in config:
+                config['language_focus'] = ''  # Kein Fokus
+            if 'art_music' not in config:
+                config['art_music'] = ''
+            config['id'] = i
+        
+        class_assignment_data['class_config'] = class_configs
+        class_assignment_data['classes'] = {i: [] for i in range(len(class_configs))}
+        
+        return jsonify({
+            'success': True,
+            'classCount': len(class_configs),
+            'classes': class_configs
+        })
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/klassenzuteilung/assign', methods=['POST'])
+def auto_assign_classes():
+    """Führt die automatische Klassenzuteilung durch"""
+    global class_assignment_data
+    
+    try:
+        students = class_assignment_data['students']
+        class_config = class_assignment_data['class_config']
+        
+        if not students:
+            return jsonify({'success': False, 'error': 'Keine Schülerdaten vorhanden'}), 400
+        
+        if not class_config:
+            return jsonify({'success': False, 'error': 'Keine Klassenkonfiguration vorhanden'}), 400
+        
+        num_classes = len(class_config)
+        
+        # Reset alle Zuweisungen
+        for s in students:
+            s['assigned_class'] = None
+        
+        classes = {i: [] for i in range(num_classes)}
+        
+        # Schritt 1: Mische Schüler zufällig (damit keine Reihenfolge-Vorteile entstehen)
+        shuffled_students = students.copy()
+        random.shuffle(shuffled_students)
+        
+        # Berechne Zielgröße pro Klasse
+        target_size = len(students) // num_classes
+        remainder = len(students) % num_classes  # Einige Klassen bekommen 1 mehr
+        
+        # Erstelle Liste der max. Größe pro Klasse
+        max_class_sizes = {}
+        for i in range(num_classes):
+            # Erste 'remainder' Klassen bekommen einen Schüler mehr
+            max_class_sizes[i] = target_size + (1 if i < remainder else 0)
+        
+        # Prüfe welche Klassen Kunst/Musik-Fokus haben
+        ku_classes = [i for i, c in enumerate(class_config) if c.get('art_music') == 'Ku']
+        mu_classes = [i for i, c in enumerate(class_config) if c.get('art_music') == 'Mu']
+        mixed_classes = [i for i, c in enumerate(class_config) if not c.get('art_music')]
+        
+        # Gruppiere Schüler nach Kunst/Musik
+        ku_students = [s for s in shuffled_students if s['kunst_musik'] == 'Ku']
+        mu_students = [s for s in shuffled_students if s['kunst_musik'] == 'Mu']
+        
+        random.shuffle(ku_students)
+        random.shuffle(mu_students)
+        
+        # Hilfsfunktion zur Berechnung des Scores für Zuweisung (ohne Kunst/Musik-Check)
+        def assignment_score(student, class_id, current_classes):
+            config = class_config[class_id]
+            class_students = current_classes[class_id]
+            
+            score = 100  # Basiswert
+            
+            # Sprachfokus:
+            # L = nur Latein (Fortgeschritten)
+            # L0 = nur Latein 0 (Neuanfänger)
+            # L_all = Latein + Latein 0 (beide)
+            # F = Französisch
+            # Spa = Spanisch
+            lang_focus = config.get('language_focus', '')
+            student_lang = student['fremdsprache']
+            
+            if lang_focus:
+                if lang_focus == 'L' and student_lang == 'L':
+                    score += 30
+                elif lang_focus == 'L0' and student_lang == 'L0':
+                    score += 30
+                elif lang_focus == 'L_all' and student_lang in ['L', 'L0']:
+                    score += 30
+                elif lang_focus == 'F' and student_lang == 'F':
+                    score += 30
+                elif lang_focus == 'Spa' and student_lang == 'Spa':
+                    score += 30
+                else:
+                    # Schüler passt nicht zum Sprachfokus
+                    score -= 20
+            
+            # Geschlechterbalance
+            if class_students:
+                male_in_class = sum(1 for s in class_students if s['geschlecht'] == 'm')
+                total_in_class = len(class_students)
+                current_male_ratio = male_in_class / total_in_class
+                
+                # Berechne globale m/w Quote
+                total_male = sum(1 for s in students if s['geschlecht'] == 'm')
+                global_male_ratio = total_male / len(students) if students else 0.5
+                
+                if student['geschlecht'] == 'm':
+                    new_ratio = (male_in_class + 1) / (total_in_class + 1)
+                else:
+                    new_ratio = male_in_class / (total_in_class + 1)
+                
+                # Strafe für Abweichung von globaler Quote
+                balance_penalty = abs(global_male_ratio - new_ratio) * 50
+                score -= balance_penalty
+            
+            # Intern/Extern Balance
+            if class_students:
+                extern_in_class = sum(1 for s in class_students if s['intern_extern'] == 'extern')
+                
+                # Berechne globale Extern-Quote
+                total_extern = sum(1 for s in students if s['intern_extern'] == 'extern')
+                global_extern_ratio = total_extern / len(students) if students else 0.5
+                
+                if student['intern_extern'] == 'extern':
+                    new_ratio = (extern_in_class + 1) / (len(class_students) + 1)
+                else:
+                    new_ratio = extern_in_class / (len(class_students) + 1)
+                
+                extern_penalty = abs(global_extern_ratio - new_ratio) * 40
+                score -= extern_penalty
+            
+            # Bisherige Klasse aufbrechen (nur für interne)
+            if student['intern_extern'] == 'intern' and student['bisherige_klasse']:
+                same_old_class_count = sum(
+                    1 for s in class_students 
+                    if s.get('bisherige_klasse') == student['bisherige_klasse']
+                )
+                score -= same_old_class_count * 10
+            
+            # Klassengröße - starke Strafe wenn über Zielgröße
+            current_size = len(class_students)
+            max_size = max_class_sizes[class_id]
+            if current_size >= max_size:
+                score -= 1000  # Klasse ist voll
+            elif current_size > target_size:
+                score -= (current_size - target_size) * 20
+            
+            return score
+        
+        def assign_student_to_best_class(student, eligible_classes):
+            """Weist einen Schüler der besten Klasse aus eligible_classes zu"""
+            best_class = None
+            best_score = float('-inf')
+            
+            for class_id in eligible_classes:
+                # Prüfe ob Klasse noch Platz hat
+                if len(classes[class_id]) >= max_class_sizes[class_id]:
+                    continue
+                    
+                score = assignment_score(student, class_id, classes)
+                
+                if score > best_score:
+                    best_score = score
+                    best_class = class_id
+            
+            # Fallback: Wenn alle Klassen "voll" sind, nimm die mit wenigsten Schülern
+            if best_class is None and eligible_classes:
+                best_class = min(eligible_classes, key=lambda c: len(classes[c]))
+            
+            if best_class is not None:
+                student['assigned_class'] = best_class
+                classes[best_class].append(student)
+                return True
+            return False
+        
+        # Schritt 2: Weise Kunst-Schüler zu
+        for student in ku_students:
+            # Erst Kunst-Klassen, dann gemischte Klassen
+            eligible = ku_classes + mixed_classes if ku_classes else mixed_classes
+            if not eligible:
+                eligible = list(range(num_classes))  # Fallback: alle Klassen
+            assign_student_to_best_class(student, eligible)
+        
+        # Schritt 3: Weise Musik-Schüler zu
+        for student in mu_students:
+            # Erst Musik-Klassen, dann gemischte Klassen
+            eligible = mu_classes + mixed_classes if mu_classes else mixed_classes
+            if not eligible:
+                eligible = list(range(num_classes))  # Fallback: alle Klassen
+            assign_student_to_best_class(student, eligible)
+        
+        class_assignment_data['classes'] = classes
+        
+        # Berechne Statistiken pro Klasse
+        class_stats = []
+        for class_id, class_students in classes.items():
+            config = class_config[class_id]
+            stats = {
+                'id': class_id,
+                'name': config.get('name', f'Klasse {class_id + 1}'),
+                'language_focus': config.get('language_focus', ''),
+                'art_music': config.get('art_music', ''),
+                'total': len(class_students),
+                'male': sum(1 for s in class_students if s['geschlecht'] == 'm'),
+                'female': sum(1 for s in class_students if s['geschlecht'] == 'w'),
+                'intern': sum(1 for s in class_students if s['intern_extern'] == 'intern'),
+                'extern': sum(1 for s in class_students if s['intern_extern'] == 'extern'),
+                'students': class_students
+            }
+            
+            # Sprachstatistik
+            lang_stats = defaultdict(int)
+            for s in class_students:
+                if s['fremdsprache']:
+                    lang_stats[s['fremdsprache']] += 1
+            stats['languages'] = dict(lang_stats)
+            
+            class_stats.append(stats)
+        
+        return jsonify({
+            'success': True,
+            'classes': class_stats
+        })
+    
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/klassenzuteilung/move', methods=['POST'])
+def move_student():
+    """Verschiebt einen Schüler in eine andere Klasse"""
+    global class_assignment_data
+    
+    try:
+        data = request.get_json()
+        student_id = data.get('studentId')
+        target_class = data.get('targetClass')
+        
+        if student_id is None or target_class is None:
+            return jsonify({'success': False, 'error': 'studentId und targetClass erforderlich'}), 400
+        
+        # Finde Schüler
+        student = None
+        for s in class_assignment_data['students']:
+            if s['id'] == student_id:
+                student = s
+                break
+        
+        if not student:
+            return jsonify({'success': False, 'error': 'Schüler nicht gefunden'}), 404
+        
+        old_class = student['assigned_class']
+        
+        # Entferne aus alter Klasse
+        if old_class is not None and old_class in class_assignment_data['classes']:
+            class_assignment_data['classes'][old_class] = [
+                s for s in class_assignment_data['classes'][old_class] 
+                if s['id'] != student_id
+            ]
+        
+        # Füge zu neuer Klasse hinzu
+        student['assigned_class'] = target_class
+        if target_class not in class_assignment_data['classes']:
+            class_assignment_data['classes'][target_class] = []
+        class_assignment_data['classes'][target_class].append(student)
+        
+        # Berechne neue Statistiken
+        class_stats = []
+        for class_id, class_students in class_assignment_data['classes'].items():
+            config = class_assignment_data['class_config'][class_id] if class_id < len(class_assignment_data['class_config']) else {}
+            stats = {
+                'id': class_id,
+                'name': config.get('name', f'Klasse {class_id + 1}'),
+                'language_focus': config.get('language_focus', ''),
+                'art_music': config.get('art_music', ''),
+                'total': len(class_students),
+                'male': sum(1 for s in class_students if s['geschlecht'] == 'm'),
+                'female': sum(1 for s in class_students if s['geschlecht'] == 'w'),
+                'intern': sum(1 for s in class_students if s['intern_extern'] == 'intern'),
+                'extern': sum(1 for s in class_students if s['intern_extern'] == 'extern'),
+                'students': class_students
+            }
+            
+            lang_stats = defaultdict(int)
+            for s in class_students:
+                if s['fremdsprache']:
+                    lang_stats[s['fremdsprache']] += 1
+            stats['languages'] = dict(lang_stats)
+            
+            class_stats.append(stats)
+        
+        return jsonify({
+            'success': True,
+            'classes': class_stats
+        })
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/klassenzuteilung/export', methods=['GET'])
+def export_class_assignment():
+    """Exportiert die Klassenzuteilung als Excel"""
+    global class_assignment_data
+    
+    try:
+        students = class_assignment_data['students']
+        class_config = class_assignment_data['class_config']
+        
+        if not students:
+            return jsonify({'success': False, 'error': 'Keine Daten zum Exportieren'}), 400
+        
+        # Erstelle DataFrame
+        export_data = []
+        for student in students:
+            class_id = student.get('assigned_class')
+            class_name = ''
+            if class_id is not None and class_id < len(class_config):
+                class_name = class_config[class_id].get('name', f'Klasse {class_id + 1}')
+            
+            export_data.append({
+                'Nachname': student['nachname'],
+                'Vorname': student['vorname'],
+                'Geschlecht': student['geschlecht'],
+                'Intern/Extern': student['intern_extern'],
+                '2. Fremdsprache': student['fremdsprache'],
+                'Kunst/Musik': student['kunst_musik'],
+                'Bisherige Klasse': student.get('bisherige_klasse', ''),
+                'Neue Klasse': class_name
+            })
+        
+        df = pd.DataFrame(export_data)
+        
+        # Erstelle Excel-Datei im Speicher
+        excel_buffer = io.BytesIO()
+        with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Klassenzuteilung')
+            
+            worksheet = writer.sheets['Klassenzuteilung']
+            for column in worksheet.columns:
+                max_length = 0
+                column_letter = column[0].column_letter
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                adjusted_width = min(max_length + 2, 50)
+                worksheet.column_dimensions[column_letter].width = adjusted_width
+        
+        excel_buffer.seek(0)
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        return send_file(
+            excel_buffer,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=f'klassenzuteilung_{timestamp}.xlsx'
+        )
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/klassenzuteilung/clear', methods=['POST'])
+def clear_class_assignment():
+    """Löscht alle Klassenzuteilungsdaten"""
+    global class_assignment_data
+    
+    class_assignment_data = {
+        'students': [],
+        'classes': {},
+        'class_config': [],
+        'invalid_students': []
+    }
+    
+    return jsonify({'success': True, 'message': 'Daten gelöscht'})
+
+# ============================================================================
+# Ende KLASSENZUTEILUNG API
+# ============================================================================
+
+@app.route('/upload_excel', methods=['POST'])
+def upload_excel():
+    """Handles Excel file upload, removes red-colored rows, and returns Vorname/Nachname data"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'error': 'Keine Datei hochgeladen'}), 400
+        
+        file = request.files['file']
+        
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'Keine Datei ausgewählt'}), 400
+        
+        if not file.filename.endswith('.xlsx'):
+            return jsonify({'success': False, 'error': 'Nur .xlsx Dateien werden unterstützt'}), 400
+        
+        # Load the workbook
+        wb = load_workbook(file, data_only=False)
+        ws = wb.active
+        
+        # First row is the header - search for "Vorname" and "Nachname"
+        vorname_col = None
+        nachname_col = None
+        
+        first_row = list(ws[1])
+        for col_idx, cell in enumerate(first_row, start=1):
+            if cell.value:
+                cell_value = str(cell.value).strip().lower()
+                if 'vorname' in cell_value:
+                    vorname_col = col_idx
+                elif 'nachname' in cell_value:
+                    nachname_col = col_idx
+        
+        if not vorname_col or not nachname_col:
+            return jsonify({'success': False, 'error': 'Spalten "Vorname" und/oder "Nachname" nicht in der ersten Zeile gefunden'}), 400
+        
+        # Process rows starting from row 2 and filter out red-colored rows
+        data = []
+        for row in ws.iter_rows(min_row=2):
+            # Check if any cell in the row is colored red
+            is_red = False
+            for cell in row:
+                if cell.fill and cell.fill.start_color:
+                    color = cell.fill.start_color
+                    if hasattr(color, 'rgb') and color.rgb:
+                        rgb_str = str(color.rgb)
+                        # Remove alpha channel if present (ARGB format starts with FF)
+                        if len(rgb_str) == 8:
+                            rgb_str = rgb_str[2:]
+                        
+                        try:
+                            r = int(rgb_str[0:2], 16)
+                            g = int(rgb_str[2:4], 16)
+                            b = int(rgb_str[4:6], 16)
+                            # Consider it red if red component is dominant
+                            if r > 180 and r > (g + 50) and r > (b + 50):
+                                is_red = True
+                                break
+                        except (ValueError, IndexError):
+                            pass
+            
+            if not is_red:
+                # Extract Vorname and Nachname
+                vorname = row[vorname_col - 1].value if len(row) >= vorname_col else None
+                nachname = row[nachname_col - 1].value if len(row) >= nachname_col else None
+                
+                # Only add if at least one field has a value
+                if vorname or nachname:
+                    data.append({
+                        'Vorname': str(vorname).strip() if vorname else '',
+                        'Nachname': str(nachname).strip() if nachname else ''
+                    })
+        
+        return jsonify({
+            'success': True,
+            'data': data,
+            'rowCount': len(data)
+        })
+    
+    except Exception as e:
+        print(f"Error processing Excel file: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': f'Fehler beim Verarbeiten der Datei: {str(e)}'}), 500
 
 def is_port_available(port):
     """Prüft ob ein Port verfügbar ist"""
