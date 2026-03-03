@@ -525,12 +525,23 @@ def upload_class_list():
         wb = load_workbook(file, data_only=False)
         ws = wb.active
         
+        print(f"\n{'='*60}")
+        print(f"📋 KLASSENZUTEILUNG UPLOAD: {file.filename}")
+        print(f"Aktives Sheet: '{ws.title}'")
+        print(f"Alle Sheets: {wb.sheetnames}")
+        print(f"Dimensionen: {ws.dimensions}")
+        print(f"Max Row: {ws.max_row}, Max Col: {ws.max_column}")
+        
         # Finde alle relevanten Spalten in der ersten Zeile
         column_mapping = {}
         required_columns = ['nachnamen', 'vornamen', 'geschlecht', 'extern / intern ', '2. FS', 'ku/mu']
         optional_columns = ['bisherige klasse']
         
         first_row = list(ws[1])
+        print(f"\n📊 Erste Zeile ({len(first_row)} Spalten):")
+        for col_idx, cell in enumerate(first_row, start=1):
+            print(f"  Spalte {col_idx}: '{cell.value}' (type: {type(cell.value).__name__})")
+        
         for col_idx, cell in enumerate(first_row, start=1):
             if cell.value:
                 cell_value = str(cell.value).strip().lower()
@@ -566,7 +577,10 @@ def upload_class_list():
         if 'kunst_musik' not in column_mapping:
             missing.append('KU/MU')
         
+        print(f"\n🗺️  Column Mapping: {column_mapping}")
+        
         if missing:
+            print(f"❌ Fehlende Spalten: {missing}")
             return jsonify({
                 'success': False, 
                 'error': f'Fehlende Spalten in Zeile 1: {", ".join(missing)}'
@@ -575,8 +589,12 @@ def upload_class_list():
         students = []
         invalid_students = []
         student_id = 0
+        skipped_red = 0
+        skipped_empty = 0
+        total_rows_checked = 0
         
         for row_num, row in enumerate(ws.iter_rows(min_row=2), start=2):
+            total_rows_checked += 1
             # Prüfe ob Zeile rot markiert ist
             is_red = False
             for cell in row:
@@ -597,6 +615,8 @@ def upload_class_list():
                             pass
             
             if is_red:
+                print(f"  🔴 Zeile {row_num}: Übersprungen (rot markiert)")
+                skipped_red += 1
                 continue  # Überspringe rot markierte Zeilen
             
             # Extrahiere Daten
@@ -617,7 +637,14 @@ def upload_class_list():
             
             # Überspringe leere Zeilen
             if not nachname and not vorname:
+                skipped_empty += 1
+                if total_rows_checked <= 5:  # Nur erste 5 leere Zeilen loggen
+                    print(f"  ⬜ Zeile {row_num}: Übersprungen (Name leer)")
                 continue
+            
+            # Log erste paar Schüler
+            if student_id < 3:
+                print(f"  👤 Zeile {row_num}: {vorname} {nachname}, Geschl={geschlecht}, I/E={intern_extern}, FS={fremdsprache}, KuMu={kunst_musik}")
             
             # Normalisiere Werte
             if geschlecht in ['m', 'männlich', 'male']:
@@ -695,8 +722,17 @@ def upload_class_list():
             else:
                 student['missing_fields'] = missing_fields
                 invalid_students.append(student)
+                print(f"  ⚠️  Zeile {row_num}: UNGÜLTIG - {vorname} {nachname} - fehlende Felder: {missing_fields}")
             
             student_id += 1
+        
+        print(f"\n📈 Zusammenfassung:")
+        print(f"  Zeilen geprüft: {total_rows_checked}")
+        print(f"  Rot übersprungen: {skipped_red}")
+        print(f"  Leer übersprungen: {skipped_empty}")
+        print(f"  Gültige Schüler: {len(students)}")
+        print(f"  Ungültige Schüler: {len(invalid_students)}")
+        print(f"{'='*60}")
         
         # Statistiken berechnen
         male_count = sum(1 for s in students if s['geschlecht'] == 'm')

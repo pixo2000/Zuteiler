@@ -1385,12 +1385,21 @@
         }
         
         async function uploadFile() {
+            console.log('[Upload CSV] uploadFile() aufgerufen');
             const fileInput = document.getElementById('csvFile');
             const file = fileInput.files[0];
             
             if (!file) {
+                console.warn('[Upload CSV] Keine Datei ausgewählt (file ist null/undefined)');
                 return;
             }
+            
+            console.log('[Upload CSV] Datei ausgewählt:', {
+                name: file.name,
+                size: file.size + ' Bytes',
+                type: file.type,
+                lastModified: new Date(file.lastModified).toISOString()
+            });
             
             const uploadSpinner = document.getElementById('uploadSpinner');
             const uploadStatus = document.getElementById('uploadStatus');
@@ -1404,6 +1413,7 @@
             
             const formData = new FormData();
             formData.append('file', file);
+            console.log('[Upload CSV] FormData erstellt, sende POST an /api/upload ...');
             
             try {
                 const response = await fetch('/api/upload', {
@@ -1411,7 +1421,14 @@
                     body: formData
                 });
                 
+                console.log('[Upload CSV] Response erhalten:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    contentType: response.headers.get('content-type')
+                });
+                
                 const data = await response.json();
+                console.log('[Upload CSV] Response JSON:', data);
                 
                 if (data.success) {
                     document.getElementById('uploadedFileName').textContent = 
@@ -1430,10 +1447,13 @@
                     uploadError.style.display = 'flex';
                 }
             } catch (error) {
+                console.error('[Upload CSV] Exception:', error);
+                console.error('[Upload CSV] Stack:', error.stack);
                 document.getElementById('uploadErrorMessage').textContent = error.message;
                 uploadError.style.display = 'flex';
             } finally {
                 uploadSpinner.style.display = 'none';
+                console.log('[Upload CSV] Upload-Vorgang abgeschlossen');
             }
         }
         
@@ -1693,13 +1713,25 @@
         };
         
         async function uploadKlassenFile() {
+            console.log('[Upload XLSX] uploadKlassenFile() aufgerufen');
             const fileInput = document.getElementById('klassenExcelFile');
             const file = fileInput.files[0];
             
-            if (!file) return;
+            if (!file) {
+                console.warn('[Upload XLSX] Keine Datei ausgewählt (file ist null/undefined)');
+                return;
+            }
+            
+            console.log('[Upload XLSX] Datei ausgewählt:', {
+                name: file.name,
+                size: file.size + ' Bytes',
+                type: file.type,
+                lastModified: new Date(file.lastModified).toISOString()
+            });
             
             const formData = new FormData();
             formData.append('file', file);
+            console.log('[Upload XLSX] FormData erstellt, sende POST an /api/klassenzuteilung/upload ...');
             
             document.getElementById('klassenUploadSuccess').style.display = 'none';
             document.getElementById('klassenUploadError').style.display = 'none';
@@ -1714,9 +1746,22 @@
                     body: formData
                 });
                 
+                console.log('[Upload XLSX] Response erhalten:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    contentType: response.headers.get('content-type')
+                });
+                
                 const data = await response.json();
+                console.log('[Upload XLSX] Response JSON:', data);
                 
                 if (data.success) {
+                    console.log('[Upload XLSX] Upload erfolgreich:', {
+                        filename: data.filename,
+                        studentCount: data.studentCount,
+                        invalidCount: data.invalidCount,
+                        stats: data.stats
+                    });
                     document.getElementById('klassenUploadedFileName').textContent = 
                         `${data.filename} (${data.studentCount} gültige Schüler)`;
                     document.getElementById('klassenUploadSuccess').style.display = 'flex';
@@ -1784,14 +1829,19 @@
                     document.getElementById('klassenConfigCard').classList.remove('hidden');
                     updateClassConfigInputs();
                 } else {
+                    console.error('[Upload XLSX] Server-Fehler:', data.error);
                     document.getElementById('klassenUploadErrorMessage').textContent = data.error;
                     document.getElementById('klassenUploadError').style.display = 'flex';
                     document.getElementById('klassenUploadStatus').classList.remove('hidden');
                 }
             } catch (error) {
+                console.error('[Upload XLSX] Exception:', error);
+                console.error('[Upload XLSX] Stack:', error.stack);
                 document.getElementById('klassenUploadErrorMessage').textContent = error.message;
                 document.getElementById('klassenUploadError').style.display = 'flex';
                 document.getElementById('klassenUploadStatus').classList.remove('hidden');
+            } finally {
+                console.log('[Upload XLSX] Upload-Vorgang abgeschlossen');
             }
         }
         
