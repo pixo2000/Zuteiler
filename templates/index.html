@@ -847,6 +847,8 @@
                         <li><strong>extern / intern</strong> (intern, extern oder extern (Kreis))</li>
                         <li><strong>2. FS</strong> - Fremdsprache (F, L, L0, Spa)</li>
                         <li><strong>KU/MU</strong> - Kunst oder Musik (Ku, Mu)</li>
+                        <li><strong>Reli/Ethik</strong> - Religion/Ethik (Rev, Rka, Eth)</li>
+                        <li><strong>ZF</strong> - Zusatzfach (Ek, Phil, Info, Spa, Bili)</li>
                         <li><strong>bisherige Klasse</strong> (optional, nur für interne Schüler relevant)</li>
                     </ul>
                     <p><strong>⚠️ Rot markierte Zeilen werden ignoriert!</strong></p>
@@ -942,6 +944,16 @@
                     <div id="klassenKuMuStats" class="stats-grid">
                         <!-- Wird dynamisch gefüllt -->
                     </div>
+                    
+                    <h3 style="font-size: 16px; font-weight: 500; margin: 24px 0 12px 0;">Reli / Ethik</h3>
+                    <div id="klassenReliStats" class="stats-grid">
+                        <!-- Wird dynamisch gefüllt -->
+                    </div>
+                    
+                    <h3 style="font-size: 16px; font-weight: 500; margin: 24px 0 12px 0;">Zusatzfach (ZF)</h3>
+                    <div id="klassenZFStats" class="stats-grid">
+                        <!-- Wird dynamisch gefüllt -->
+                    </div>
                 </div>
             </div>
             
@@ -1002,11 +1014,25 @@
                     3. Klassenzuteilung
                 </h2>
                 <p style="margin-bottom: 16px; color: var(--md-sys-color-on-surface-variant);">
-                    Ziehen Sie Schüler per Drag & Drop zwischen den Klassen. Rechtsklick auf einen Schüler zeigt Details.
+                    Klicken Sie auf einen Schüler um Details zu sehen. Drag & Drop zum Verschieben.
                 </p>
                 
-                <!-- Export Button -->
-                <div style="margin-bottom: 24px;">
+                <!-- Toolbar: Sort + Export -->
+                <div style="margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="material-symbols-outlined" style="color: var(--md-sys-color-on-surface-variant); font-size: 20px;">sort</span>
+                        <label style="font-size: 13px; color: var(--md-sys-color-on-surface-variant);">Sortieren nach:</label>
+                        <select id="klassenSortSelect" class="text-field" style="padding: 6px 12px; font-size: 13px; min-width: 150px;" onchange="sortAndRedisplay()">
+                            <option value="name">Name (A-Z)</option>
+                            <option value="name-desc">Name (Z-A)</option>
+                            <option value="geschlecht">Geschlecht</option>
+                            <option value="sprache">2. Fremdsprache</option>
+                            <option value="zusatzfach">Zusatzfach (Ku/Mu)</option>
+                            <option value="reli_ethik">Reli/Ethik</option>
+                            <option value="zf">Zusatzfach (ZF)</option>
+                            <option value="intern_extern">Intern/Extern</option>
+                        </select>
+                    </div>
                     <button class="btn btn-secondary" onclick="exportKlassenZuteilung()">
                         <span class="material-symbols-outlined">download</span>
                         Als Excel exportieren
@@ -1016,6 +1042,10 @@
                 <!-- Klassen Container -->
                 <div id="klassenContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 16px;">
                     <!-- Wird dynamisch generiert -->
+                </div>
+                
+                <!-- Kurs-Zusammenlegungen -->
+                <div id="courseMergesContainer" class="hidden" style="margin-top: 24px;">
                 </div>
             </div>
             
@@ -1807,6 +1837,34 @@
                         kumuContainer.appendChild(div);
                     });
                     
+                    // Reli/Ethik-Statistiken anzeigen
+                    const reliContainer = document.getElementById('klassenReliStats');
+                    reliContainer.innerHTML = '';
+                    const reliLabels = { 'Rev': 'Evangelisch', 'Rka': 'Katholisch', 'Eth': 'Ethik' };
+                    Object.entries(data.stats.reliEthik || {}).forEach(([re, count]) => {
+                        const div = document.createElement('div');
+                        div.className = 'stat-card';
+                        div.innerHTML = `
+                            <div class="stat-value">${count}</div>
+                            <div class="stat-label">${reliLabels[re] || re}</div>
+                        `;
+                        reliContainer.appendChild(div);
+                    });
+                    
+                    // Zusatzfach-Statistiken anzeigen
+                    const zfContainer = document.getElementById('klassenZFStats');
+                    zfContainer.innerHTML = '';
+                    const zfLabels = { 'Ek': 'Erdkunde', 'Phil': 'Philosophie', 'Info': 'Informatik', 'Spa': 'Spanisch', 'Bili': 'Bilingual' };
+                    Object.entries(data.stats.zusatzfach || {}).forEach(([zf, count]) => {
+                        const div = document.createElement('div');
+                        div.className = 'stat-card';
+                        div.innerHTML = `
+                            <div class="stat-value">${count}</div>
+                            <div class="stat-label">${zfLabels[zf] || zf}</div>
+                        `;
+                        zfContainer.appendChild(div);
+                    });
+                    
                     document.getElementById('klassenStats').classList.remove('hidden');
                     
                     // Speichere Stats für Vorschläge
@@ -1855,6 +1913,7 @@
             const kuCount = stats.kunstMusik?.Ku || 0;
             const muCount = stats.kunstMusik?.Mu || 0;
             const totalStudents = klassenData.students;
+            const languages = stats.languages || {};
             
             // Berechne optimale Klassenanzahl basierend auf Slider
             const idealClassSize = parseInt(document.getElementById('classSizeSlider').value) || 27;
@@ -1886,21 +1945,70 @@
             document.getElementById('numClasses').value = suggestedNumClasses;
             updateClassConfigInputs();
             
-            // Setze Kunst/Musik für jede Klasse
+            // Bestimme Sprach-Verteilung pro Ku/Mu-Typ
+            // Ziel: Große Sprachgruppen erhalten eigene Klassen, kleine werden gemischt
+            const sortedLangs = Object.entries(languages).sort((a, b) => b[1] - a[1]);
+            
+            // Verteile Sprachfokus auf die Klassen
+            function assignLanguages(classCount, kmType) {
+                if (classCount <= 0) return [];
+                const kmStudents = kmType === 'Ku' ? kuCount : muCount;
+                const assignments = [];
+                
+                // Berechne Schüler pro Sprache für diesen Ku/Mu-Typ (geschätzt proportional)
+                const langEstimates = {};
+                for (const [lang, count] of sortedLangs) {
+                    langEstimates[lang] = Math.round(count * (kmStudents / totalStudents));
+                }
+                
+                // Große Sprachen bekommen eigene Klassen wenn möglich
+                let remainingClasses = classCount;
+                const usedLangs = [];
+                
+                for (const [lang, count] of sortedLangs) {
+                    const estimated = langEstimates[lang];
+                    const neededClasses = Math.round(estimated / idealClassSize);
+                    if (neededClasses >= 1 && remainingClasses > 1) {
+                        const classesForLang = Math.min(neededClasses, remainingClasses - 1);
+                        for (let i = 0; i < classesForLang; i++) {
+                            assignments.push(lang);
+                            remainingClasses--;
+                        }
+                        usedLangs.push(lang);
+                    }
+                }
+                
+                // Restliche Klassen bekommen keinen Sprachfokus (gemischt)
+                while (assignments.length < classCount) {
+                    assignments.push('');
+                }
+                
+                return assignments;
+            }
+            
+            const kuLangAssignments = assignLanguages(kuClasses, 'Ku');
+            const muLangAssignments = assignLanguages(muClasses, 'Mu');
+            
+            // Setze Kunst/Musik und Sprachfokus für jede Klasse
             let classIndex = 0;
             for (let i = 0; i < kuClasses; i++) {
                 const kmInput = document.querySelector(`.class-km-input[data-class="${classIndex}"]`);
                 if (kmInput) kmInput.value = 'Ku';
+                const langInput = document.querySelector(`.class-lang-input[data-class="${classIndex}"]`);
+                if (langInput) langInput.value = kuLangAssignments[i] || '';
                 classIndex++;
             }
             for (let i = 0; i < muClasses; i++) {
                 const kmInput = document.querySelector(`.class-km-input[data-class="${classIndex}"]`);
                 if (kmInput) kmInput.value = 'Mu';
+                const langInput = document.querySelector(`.class-lang-input[data-class="${classIndex}"]`);
+                if (langInput) langInput.value = muLangAssignments[i] || '';
                 classIndex++;
             }
             
-            // Info-Meldung
-            alert(`Vorschlag: ${suggestedNumClasses} Klassen\n\nKunst: ${kuClasses} Klassen (für ${kuCount} Schüler)\nMusik: ${muClasses} Klassen (für ${muCount} Schüler)\n\nDurchschnittliche Klassengröße: ~${Math.round(totalStudents / suggestedNumClasses)} Schüler`);
+            // Info-Meldung mit Sprach-Details
+            let langInfo = sortedLangs.map(([lang, count]) => `  ${lang}: ${count}`).join('\n');
+            alert(`Vorschlag: ${suggestedNumClasses} Klassen\n\nKunst: ${kuClasses} Klassen (für ${kuCount} Schüler)\nMusik: ${muClasses} Klassen (für ${muCount} Schüler)\n\nSprachen-Verteilung:\n${langInfo}\n\nDurchschnittliche Klassengröße: ~${Math.round(totalStudents / suggestedNumClasses)} Schüler\n\nSprachfokus wurde automatisch gesetzt wo sinnvoll.`);
         }
         
         function updateClassConfigInputs() {
@@ -1911,7 +2019,7 @@
             
             for (let i = 0; i < numClasses; i++) {
                 const div = document.createElement('div');
-                div.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; padding: 16px; background: var(--md-sys-color-surface-container-high); border-radius: 8px;';
+                div.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; padding: 16px; background: var(--md-sys-color-surface-container-high); border-radius: 8px;';
                 div.innerHTML = `
                     <div>
                         <label style="font-size: 12px; color: var(--md-sys-color-on-surface-variant); display: block; margin-bottom: 4px;">Klassenname</label>
@@ -1929,11 +2037,31 @@
                         </select>
                     </div>
                     <div>
-                        <label style="font-size: 12px; color: var(--md-sys-color-on-surface-variant); display: block; margin-bottom: 4px;">Kunst/Musik *</label>
-                        <select class="text-field class-km-input" data-class="${i}" style="padding: 8px;" required>
-                            <option value="" disabled selected>-- Bitte wählen --</option>
+                        <label style="font-size: 12px; color: var(--md-sys-color-on-surface-variant); display: block; margin-bottom: 4px;">Kunst/Musik</label>
+                        <select class="text-field class-km-input" data-class="${i}" style="padding: 8px;">
+                            <option value="">Gemischt</option>
                             <option value="Ku">Kunst</option>
                             <option value="Mu">Musik</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 12px; color: var(--md-sys-color-on-surface-variant); display: block; margin-bottom: 4px;">Reli/Ethik</label>
+                        <select class="text-field class-reli-input" data-class="${i}" style="padding: 8px;">
+                            <option value="">Gemischt</option>
+                            <option value="Rev">Evangelisch</option>
+                            <option value="Rka">Katholisch</option>
+                            <option value="Eth">Ethik</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 12px; color: var(--md-sys-color-on-surface-variant); display: block; margin-bottom: 4px;">Zusatzfach</label>
+                        <select class="text-field class-zf-input" data-class="${i}" style="padding: 8px;">
+                            <option value="">Gemischt</option>
+                            <option value="Ek">Erdkunde</option>
+                            <option value="Phil">Philosophie</option>
+                            <option value="Info">Informatik</option>
+                            <option value="Spa">Spanisch</option>
+                            <option value="Bili">Bilingual</option>
                         </select>
                     </div>
                 `;
@@ -1942,28 +2070,23 @@
         }
         
         async function startKlassenZuteilung() {
-            // Prüfe ob alle Kunst/Musik-Felder ausgefüllt sind
-            const numClasses = parseInt(document.getElementById('numClasses').value) || 4;
-            for (let i = 0; i < numClasses; i++) {
-                const kmInput = document.querySelector(`.class-km-input[data-class="${i}"]`);
-                if (!kmInput || !kmInput.value) {
-                    alert(`Bitte wählen Sie für alle Klassen Kunst oder Musik aus!\n\nKlasse ${i + 1} hat noch keine Auswahl.`);
-                    return;
-                }
-            }
-            
             // Sammle Klassenkonfiguration
+            const numClasses = parseInt(document.getElementById('numClasses').value) || 4;
             const classConfigs = [];
             
             for (let i = 0; i < numClasses; i++) {
                 const nameInput = document.querySelector(`.class-name-input[data-class="${i}"]`);
                 const langInput = document.querySelector(`.class-lang-input[data-class="${i}"]`);
                 const kmInput = document.querySelector(`.class-km-input[data-class="${i}"]`);
+                const reliInput = document.querySelector(`.class-reli-input[data-class="${i}"]`);
+                const zfInput = document.querySelector(`.class-zf-input[data-class="${i}"]`);
                 
                 classConfigs.push({
                     name: nameInput ? nameInput.value : `Klasse ${i + 1}`,
                     language_focus: langInput ? langInput.value : '',
-                    art_music: kmInput ? kmInput.value : ''
+                    art_music: kmInput ? kmInput.value : '',
+                    reli_focus: reliInput ? reliInput.value : '',
+                    zf_focus: zfInput ? zfInput.value : ''
                 });
             }
             
@@ -1986,7 +2109,10 @@
                 if (data.success) {
                     klassenData.classes = data.classes;
                     klassenData.classConfig = classConfigs;
+                    klassenData.courseMerges = data.course_merges || [];
+                    klassenData.minCourseSize = data.min_course_size || 12;
                     displayKlassenResult(data.classes);
+                    displayCourseMerges(data.course_merges || [], data.min_course_size || 12);
                     document.getElementById('klassenResultCard').classList.remove('hidden');
                     document.getElementById('klassenResultCard').scrollIntoView({ behavior: 'smooth' });
                 } else {
@@ -1997,9 +2123,58 @@
             }
         }
         
+        // Sortier-Funktion für Schüler in Klassen
+        function sortStudents(students, sortBy) {
+            const sorted = [...students];
+            switch (sortBy) {
+                case 'name':
+                    sorted.sort((a, b) => (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname));
+                    break;
+                case 'name-desc':
+                    sorted.sort((a, b) => (b.nachname + b.vorname).localeCompare(a.nachname + a.vorname));
+                    break;
+                case 'geschlecht':
+                    sorted.sort((a, b) => (a.geschlecht || '').localeCompare(b.geschlecht || '') || (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname));
+                    break;
+                case 'sprache':
+                    sorted.sort((a, b) => (a.fremdsprache || '').localeCompare(b.fremdsprache || '') || (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname));
+                    break;
+                case 'zusatzfach':
+                    sorted.sort((a, b) => (a.kunst_musik || '').localeCompare(b.kunst_musik || '') || (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname));
+                    break;
+                case 'reli_ethik':
+                    sorted.sort((a, b) => (a.reli_ethik || '').localeCompare(b.reli_ethik || '') || (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname));
+                    break;
+                case 'zf':
+                    sorted.sort((a, b) => (a.zusatzfach || '').localeCompare(b.zusatzfach || '') || (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname));
+                    break;
+                case 'intern_extern':
+                    sorted.sort((a, b) => (a.intern_extern || '').localeCompare(b.intern_extern || '') || (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname));
+                    break;
+                default:
+                    sorted.sort((a, b) => (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname));
+            }
+            return sorted;
+        }
+        
+        function sortAndRedisplay() {
+            if (klassenData.classes && klassenData.classes.length > 0) {
+                displayKlassenResult(klassenData.classes);
+            }
+        }
+        
         function displayKlassenResult(classes) {
             const container = document.getElementById('klassenContainer');
             container.innerHTML = '';
+            
+            const sortBy = document.getElementById('klassenSortSelect')?.value || 'name';
+            
+            // Ku/Mu Stats pro Klasse berechnen
+            function getKuMuStats(students) {
+                const ku = students.filter(s => s.kunst_musik === 'Ku').length;
+                const mu = students.filter(s => s.kunst_musik === 'Mu').length;
+                return { ku, mu };
+            }
             
             classes.forEach((cls, idx) => {
                 const classDiv = document.createElement('div');
@@ -2014,39 +2189,111 @@
                 // Sprachstatistik
                 const langStats = Object.entries(cls.languages || {}).map(([lang, count]) => `${lang}: ${count}`).join(', ') || '-';
                 
+                // Ku/Mu Stats
+                const kuMu = getKuMuStats(cls.students || []);
+                
+                // Sortiere Schüler
+                const sortedStudents = sortStudents(cls.students || [], sortBy);
+                
                 classDiv.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                         <h3 style="margin: 0; color: var(--md-sys-color-on-surface);">${cls.name}</h3>
                         <span style="background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); padding: 4px 12px; border-radius: 12px; font-size: 14px;">${cls.total} Schüler</span>
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; font-size: 13px; color: var(--md-sys-color-on-surface-variant);">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; font-size: 13px; color: var(--md-sys-color-on-surface-variant);">
                         <div>♂ ${cls.male} / ♀ ${cls.female} (${malePercent}% m)</div>
                         <div>Extern: ${cls.extern} (${externPercent}%)</div>
                         <div>Sprachen: ${langStats}</div>
-                        <div>${cls.language_focus ? 'Fokus: ' + cls.language_focus : ''} ${cls.art_music ? '| ' + cls.art_music : ''}</div>
+                        <div>Ku: ${kuMu.ku} / Mu: ${kuMu.mu}</div>
+                        <div style="grid-column: 1 / -1; font-size: 12px; opacity: 0.8;">
+                            ${cls.language_focus ? '📚 Sprache: ' + cls.language_focus : ''} ${cls.art_music ? '🎨 ' + (cls.art_music === 'Ku' ? 'Kunst' : 'Musik') : ''} ${cls.reli_focus ? '✝️ ' + ({Rev:'Evangelisch',Rka:'Katholisch',Eth:'Ethik'}[cls.reli_focus] || cls.reli_focus) : ''} ${cls.zf_focus ? '📘 ZF: ' + cls.zf_focus : ''}
+                        </div>
                     </div>
                     <div class="student-list" data-class-id="${cls.id}" 
-                         style="max-height: 300px; overflow-y: auto; background: var(--md-sys-color-surface); border-radius: 8px; padding: 8px;"
+                         style="max-height: 400px; overflow-y: auto; background: var(--md-sys-color-surface); border-radius: 8px; padding: 8px;"
                          ondragover="handleDragOver(event)" ondrop="handleDrop(event, ${cls.id})">
-                        ${cls.students.map(s => `
+                        ${sortedStudents.map(s => {
+                            const genderIcon = s.geschlecht === 'm' ? '♂' : '♀';
+                            const genderColor = s.geschlecht === 'm' ? '#64B5F6' : '#F48FB1';
+                            const kmIcon = s.kunst_musik === 'Ku' ? '🎨' : (s.kunst_musik === 'Mu' ? '🎵' : '');
+                            const ieIcon = s.intern_extern === 'extern' ? '🌐' : '';
+                            const reliMap = {Rev: 'Ev', Rka: 'Ka', Eth: 'Eth'};
+                            const reliLabel = reliMap[s.reli_ethik] || '';
+                            return `
                             <div class="student-item" 
                                  draggable="true" 
                                  data-student-id="${s.id}"
                                  ondragstart="handleDragStart(event, ${s.id})"
-                                 oncontextmenu="showStudentContext(event, ${s.id})"
-                                 style="padding: 8px 12px; margin: 4px 0; background: var(--md-sys-color-surface-container-high); border-radius: 6px; cursor: grab; display: flex; justify-content: space-between; align-items: center; font-size: 14px; transition: all 0.2s;"
+                                 onclick="toggleStudentDetail(event, ${s.id})"
+                                 style="padding: 8px 12px; margin: 4px 0; background: var(--md-sys-color-surface-container-high); border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.2s;"
                                  onmouseover="this.style.background='var(--md-sys-color-primary-container)'"
-                                 onmouseout="this.style.background='var(--md-sys-color-surface-container-high)'">
-                                <span>${s.nachname}, ${s.vorname}</span>
-                                <span style="font-size: 12px; color: var(--md-sys-color-on-surface-variant);">
-                                    ${s.geschlecht === 'm' ? '♂' : '♀'} | ${s.fremdsprache || '-'} | ${s.kunst_musik || '-'}
-                                </span>
+                                 onmouseout="if(!this.classList.contains('student-expanded')) this.style.background='var(--md-sys-color-surface-container-high)'">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span><span style="color: ${genderColor}; font-weight: 500;">${genderIcon}</span> ${s.nachname}, ${s.vorname}</span>
+                                    <span style="font-size: 11px; color: var(--md-sys-color-on-surface-variant); display: flex; gap: 6px; align-items: center;">
+                                        ${kmIcon} ${s.fremdsprache || ''} ${reliLabel ? '· ' + reliLabel : ''} ${s.zusatzfach ? '· ' + s.zusatzfach : ''} ${ieIcon}
+                                    </span>
+                                </div>
+                                <div class="student-detail" id="student-detail-${s.id}" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--md-sys-color-outline-variant); font-size: 13px; color: var(--md-sys-color-on-surface-variant); line-height: 1.8;">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px;">
+                                        <div><strong>Geschlecht:</strong> ${s.geschlecht === 'm' ? 'Männlich ♂' : 'Weiblich ♀'}</div>
+                                        <div><strong>Status:</strong> ${s.intern_extern === 'intern' ? '🏠 Intern' : '🌐 Extern'}</div>
+                                        <div><strong>2. Fremdsprache:</strong> ${s.fremdsprache || '-'}</div>
+                                        <div><strong>Ku/Mu:</strong> ${s.kunst_musik === 'Ku' ? '🎨 Kunst' : (s.kunst_musik === 'Mu' ? '🎵 Musik' : '-')}</div>
+                                        <div><strong>Reli/Ethik:</strong> ${(function(){var m={Rev:'✝️ Evangelisch',Rka:'✝️ Katholisch',Eth:'📖 Ethik'};return m[s.reli_ethik]||s.reli_ethik||'-'})()}</div>
+                                        <div><strong>Zusatzfach:</strong> ${s.zusatzfach || '-'}</div>
+                                        <div><strong>Bisherige Klasse:</strong> ${s.bisherige_klasse || '-'}</div>
+                                        <div><strong>Aktuelle Klasse:</strong> ${cls.name}</div>
+                                    </div>
+                                </div>
                             </div>
-                        `).join('')}
+                        `}).join('')}
                     </div>
                 `;
                 container.appendChild(classDiv);
             });
+        }
+        
+        function displayCourseMerges(merges, minSize) {
+            const container = document.getElementById('courseMergesContainer');
+            if (!merges || merges.length === 0) {
+                container.classList.add('hidden');
+                container.innerHTML = '';
+                return;
+            }
+            
+            container.classList.remove('hidden');
+            let html = `
+                <div style="background: var(--md-sys-color-tertiary-container); border-radius: 12px; padding: 20px;">
+                    <h3 style="margin: 0 0 12px 0; color: var(--md-sys-color-on-tertiary-container); display: flex; align-items: center; gap: 8px;">
+                        <span class="material-symbols-outlined">merge</span>
+                        Kurs-Zusammenlegungen (Kursmin. ${minSize} Sch\u00fcler)
+                    </h3>
+                    <p style="margin: 0 0 16px 0; font-size: 13px; color: var(--md-sys-color-on-tertiary-container); opacity: 0.8;">
+                        Diese Kurse sind in einzelnen Klassen zu klein und k\u00f6nnten klassen\u00fcbergreifend zusammengelegt werden:
+                    </p>
+                    <div style="display: grid; gap: 10px;">
+            `;
+            
+            merges.forEach(merge => {
+                const classNames = merge.classes.map(c => c.name + ' (' + c.count + ')').join(' + ');
+                const sizeOk = merge.combined_count >= minSize;
+                const statusIcon = sizeOk ? '\u2705' : '\u26a0\ufe0f';
+                const statusText = sizeOk ? 'Zusammenlegung m\u00f6glich' : 'Auch zusammen unter Mindestgr\u00f6\u00dfe';
+                
+                html += `
+                    <div style="background: var(--md-sys-color-surface); border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                        <div>
+                            <strong style="color: var(--md-sys-color-on-surface);">${statusIcon} ${merge.course}</strong>
+                            <span style="font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-left: 8px;">${classNames} = ${merge.combined_count} Sch\u00fcler</span>
+                        </div>
+                        <span style="font-size: 12px; padding: 4px 10px; border-radius: 12px; background: var(--md-sys-color-${sizeOk ? 'primary' : 'error'}-container); color: var(--md-sys-color-on-${sizeOk ? 'primary' : 'error'}-container);">${statusText}</span>
+                    </div>
+                `;
+            });
+            
+            html += '</div></div>';
+            container.innerHTML = html;
         }
         
         let draggedStudentId = null;
@@ -2092,64 +2339,42 @@
             draggedStudentId = null;
         }
         
-        function showStudentContext(event, studentId) {
-            event.preventDefault();
+        function toggleStudentDetail(event, studentId) {
+            // Ignoriere wenn Drag gestartet wird
+            if (event.defaultPrevented) return;
             
-            // Finde Schüler
-            let student = null;
-            for (const cls of klassenData.classes) {
-                const found = cls.students.find(s => s.id === studentId);
-                if (found) {
-                    student = found;
-                    break;
+            const detailEl = document.getElementById(`student-detail-${studentId}`);
+            const itemEl = detailEl?.closest('.student-item');
+            if (!detailEl || !itemEl) return;
+            
+            // Schließe alle anderen offenen Details
+            document.querySelectorAll('.student-detail').forEach(el => {
+                if (el.id !== `student-detail-${studentId}`) {
+                    el.style.display = 'none';
+                    el.closest('.student-item')?.classList.remove('student-expanded');
+                    const parentItem = el.closest('.student-item');
+                    if (parentItem) parentItem.style.background = 'var(--md-sys-color-surface-container-high)';
                 }
+            });
+            
+            // Toggle aktuelles Detail
+            if (detailEl.style.display === 'none') {
+                detailEl.style.display = 'block';
+                itemEl.classList.add('student-expanded');
+                itemEl.style.background = 'var(--md-sys-color-primary-container)';
+            } else {
+                detailEl.style.display = 'none';
+                itemEl.classList.remove('student-expanded');
+                itemEl.style.background = 'var(--md-sys-color-surface-container-high)';
             }
-            
-            if (!student) return;
-            
-            klassenData.selectedStudentId = studentId;
-            
-            const menu = document.getElementById('studentContextMenu');
-            const title = document.getElementById('contextMenuTitle');
-            const content = document.getElementById('contextMenuContent');
-            const moveSelect = document.getElementById('contextMenuMoveClass');
-            
-            title.textContent = `${student.vorname} ${student.nachname}`;
-            content.innerHTML = `
-                <div><strong>Geschlecht:</strong> ${student.geschlecht === 'm' ? 'Männlich' : 'Weiblich'}</div>
-                <div><strong>Status:</strong> ${student.intern_extern === 'intern' ? 'Intern' : 'Extern'}</div>
-                <div><strong>2. Fremdsprache:</strong> ${student.fremdsprache || '-'}</div>
-                <div><strong>Kunst/Musik:</strong> ${student.kunst_musik || '-'}</div>
-                <div><strong>Bisherige Klasse:</strong> ${student.bisherige_klasse || '-'}</div>
-                <div><strong>Aktuelle Klasse:</strong> ${klassenData.classes.find(c => c.id === student.assigned_class)?.name || '-'}</div>
-            `;
-            
-            // Fülle Dropdown
-            moveSelect.innerHTML = klassenData.classes.map(c => 
-                `<option value="${c.id}" ${c.id === student.assigned_class ? 'selected' : ''}>${c.name}</option>`
-            ).join('');
-            
-            // Positioniere Menü
-            menu.style.left = event.pageX + 'px';
-            menu.style.top = event.pageY + 'px';
-            menu.classList.remove('hidden');
-            
-            // Schließe bei Klick außerhalb
-            setTimeout(() => {
-                document.addEventListener('click', closeStudentContext);
-            }, 100);
         }
         
-        function closeStudentContext() {
-            document.getElementById('studentContextMenu').classList.add('hidden');
-            document.removeEventListener('click', closeStudentContext);
-        }
-        
-        async function moveStudentFromContext() {
-            const targetClass = parseInt(document.getElementById('contextMenuMoveClass').value);
-            const studentId = klassenData.selectedStudentId;
+        async function moveStudentInline(event, studentId) {
+            event.stopPropagation();
+            const select = document.querySelector(`.student-move-select[data-student-id="${studentId}"]`);
+            if (!select) return;
             
-            if (studentId === null) return;
+            const targetClass = parseInt(select.value);
             
             try {
                 const response = await fetch('/api/klassenzuteilung/move', {
@@ -2166,7 +2391,6 @@
                 if (data.success) {
                     klassenData.classes = data.classes;
                     displayKlassenResult(data.classes);
-                    closeStudentContext();
                 } else {
                     alert('Fehler: ' + data.error);
                 }
@@ -2174,6 +2398,11 @@
                 alert('Fehler beim Verschieben: ' + error.message);
             }
         }
+        
+        // Legacy context menu functions kept as no-ops for compatibility
+        function moveStudentFromContext() {}
+        function showStudentContext(event, studentId) { event.preventDefault(); }
+        function closeStudentContext() {}
         
         async function exportKlassenZuteilung() {
             window.location.href = '/api/klassenzuteilung/export';

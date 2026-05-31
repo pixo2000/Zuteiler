@@ -559,6 +559,10 @@ def upload_class_list():
                     column_mapping['fremdsprache'] = col_idx
                 elif 'ku/mu' in cell_value or cell_value == 'kumu' or cell_value == 'ku / mu':
                     column_mapping['kunst_musik'] = col_idx
+                elif 'reli' in cell_value and 'ethik' in cell_value:
+                    column_mapping['reli_ethik'] = col_idx
+                elif cell_value == 'zf' or cell_value == 'zusatzfach':
+                    column_mapping['zusatzfach'] = col_idx
                 elif 'bisherige klasse' in cell_value or ('klasse' in cell_value and 'bisherige' in cell_value):
                     column_mapping['bisherige_klasse'] = col_idx
         
@@ -633,6 +637,8 @@ def upload_class_list():
             intern_extern = get_cell_value('intern_extern').lower()
             fremdsprache = get_cell_value('fremdsprache')
             kunst_musik = get_cell_value('kunst_musik')
+            reli_ethik = get_cell_value('reli_ethik')
+            zusatzfach = get_cell_value('zusatzfach')
             bisherige_klasse = get_cell_value('bisherige_klasse')
             
             # Überspringe leere Zeilen
@@ -644,7 +650,7 @@ def upload_class_list():
             
             # Log erste paar Schüler
             if student_id < 3:
-                print(f"  👤 Zeile {row_num}: {vorname} {nachname}, Geschl={geschlecht}, I/E={intern_extern}, FS={fremdsprache}, KuMu={kunst_musik}")
+                print(f"  👤 Zeile {row_num}: {vorname} {nachname}, Geschl={geschlecht}, I/E={intern_extern}, FS={fremdsprache}, KuMu={kunst_musik}, Reli={reli_ethik}, ZF={zusatzfach}")
             
             # Normalisiere Werte
             if geschlecht in ['m', 'männlich', 'male']:
@@ -684,6 +690,32 @@ def upload_class_list():
             else:
                 kunst_musik = kunst_musik if kunst_musik else ''
             
+            # Normalisiere Reli/Ethik
+            reli_ethik_lower = reli_ethik.lower() if reli_ethik else ''
+            if reli_ethik_lower in ['rev', 'evangelisch', 'ev']:
+                reli_ethik = 'Rev'
+            elif reli_ethik_lower in ['rka', 'katholisch', 'ka']:
+                reli_ethik = 'Rka'
+            elif reli_ethik_lower in ['eth', 'ethik']:
+                reli_ethik = 'Eth'
+            else:
+                reli_ethik = reli_ethik if reli_ethik else ''
+            
+            # Normalisiere Zusatzfach
+            zusatzfach_lower = zusatzfach.lower() if zusatzfach else ''
+            if zusatzfach_lower in ['ek', 'erdkunde']:
+                zusatzfach = 'Ek'
+            elif zusatzfach_lower in ['phil', 'philosophie']:
+                zusatzfach = 'Phil'
+            elif zusatzfach_lower in ['info', 'informatik']:
+                zusatzfach = 'Info'
+            elif zusatzfach_lower in ['spa', 'spanisch']:
+                zusatzfach = 'Spa'
+            elif zusatzfach_lower in ['bili', 'bilingual']:
+                zusatzfach = 'Bili'
+            else:
+                zusatzfach = zusatzfach if zusatzfach else ''
+            
             student = {
                 'id': student_id,
                 'row': row_num,
@@ -693,6 +725,8 @@ def upload_class_list():
                 'intern_extern': intern_extern_normalized,
                 'fremdsprache': fremdsprache,
                 'kunst_musik': kunst_musik,
+                'reli_ethik': reli_ethik,
+                'zusatzfach': zusatzfach,
                 'bisherige_klasse': bisherige_klasse,
                 'assigned_class': None
             }
@@ -752,6 +786,18 @@ def upload_class_list():
             if s['kunst_musik']:
                 km_stats[s['kunst_musik']] += 1
         
+        # Reli/Ethik-Statistik
+        reli_stats = defaultdict(int)
+        for s in students:
+            if s['reli_ethik']:
+                reli_stats[s['reli_ethik']] += 1
+        
+        # Zusatzfach-Statistik
+        zf_stats = defaultdict(int)
+        for s in students:
+            if s['zusatzfach']:
+                zf_stats[s['zusatzfach']] += 1
+        
         # Speichere Daten
         class_assignment_data['students'] = students
         class_assignment_data['invalid_students'] = invalid_students
@@ -770,7 +816,9 @@ def upload_class_list():
                 'intern': intern_count,
                 'extern': extern_count,
                 'languages': dict(language_stats),
-                'kunstMusik': dict(km_stats)
+                'kunstMusik': dict(km_stats),
+                'reliEthik': dict(reli_stats),
+                'zusatzfach': dict(zf_stats)
             }
         })
     
@@ -796,9 +844,13 @@ def configure_classes():
             if 'name' not in config:
                 config['name'] = f'Klasse {i + 1}'
             if 'language_focus' not in config:
-                config['language_focus'] = ''  # Kein Fokus
+                config['language_focus'] = ''
             if 'art_music' not in config:
                 config['art_music'] = ''
+            if 'reli_focus' not in config:
+                config['reli_focus'] = ''
+            if 'zf_focus' not in config:
+                config['zf_focus'] = ''
             config['id'] = i
         
         class_assignment_data['class_config'] = class_configs
@@ -856,11 +908,13 @@ def auto_assign_classes():
         mixed_classes = [i for i, c in enumerate(class_config) if not c.get('art_music')]
         
         # Gruppiere Schüler nach Kunst/Musik
-        ku_students = [s for s in shuffled_students if s['kunst_musik'] == 'Ku']
-        mu_students = [s for s in shuffled_students if s['kunst_musik'] == 'Mu']
+        ku_students = [s for s in shuffled_students if s.get('kunst_musik') == 'Ku']
+        mu_students = [s for s in shuffled_students if s.get('kunst_musik') == 'Mu']
+        other_students = [s for s in shuffled_students if s.get('kunst_musik') not in ('Ku', 'Mu')]
         
         random.shuffle(ku_students)
         random.shuffle(mu_students)
+        random.shuffle(other_students)
         
         # Hilfsfunktion zur Berechnung des Scores für Zuweisung (ohne Kunst/Musik-Check)
         def assignment_score(student, class_id, current_classes):
@@ -892,6 +946,26 @@ def auto_assign_classes():
                 else:
                     # Schüler passt nicht zum Sprachfokus
                     score -= 20
+            
+            # Kunst/Musik - Fokus beachten, sonst gleichmäßig verteilen
+            km_focus = config.get('art_music', '')
+            student_km = student.get('kunst_musik', '')
+            
+            if km_focus:
+                # Klasse hat Ku/Mu-Fokus
+                if student_km == km_focus:
+                    score += 25  # Bonus: Schüler passt zum Fokus
+                else:
+                    score -= 15  # Strafe: Schüler passt nicht
+            elif class_students and student_km:
+                # Kein Fokus (Gemischt) -> gleichmäßig verteilen
+                km_in_class = sum(1 for s in class_students if s.get('kunst_musik') == student_km)
+                total_km = sum(1 for s in students if s.get('kunst_musik') == student_km)
+                global_km_ratio = total_km / len(students) if students else 0
+                
+                new_ratio = (km_in_class + 1) / (len(class_students) + 1)
+                km_penalty = abs(global_km_ratio - new_ratio) * 30
+                score -= km_penalty
             
             # Geschlechterbalance
             if class_students:
@@ -935,6 +1009,46 @@ def auto_assign_classes():
                     if s.get('bisherige_klasse') == student['bisherige_klasse']
                 )
                 score -= same_old_class_count * 10
+            
+            # Reli/Ethik - Fokus beachten, sonst gleichmäßig verteilen
+            reli_focus = config.get('reli_focus', '')
+            student_reli = student.get('reli_ethik', '')
+            
+            if reli_focus:
+                # Klasse hat Reli-Fokus
+                if student_reli == reli_focus:
+                    score += 25  # Bonus: Schüler passt zum Fokus
+                else:
+                    score -= 15  # Strafe: Schüler passt nicht
+            elif class_students and student_reli:
+                # Kein Fokus -> gleichmäßig verteilen
+                reli_in_class = sum(1 for s in class_students if s.get('reli_ethik') == student_reli)
+                total_reli = sum(1 for s in students if s.get('reli_ethik') == student_reli)
+                global_reli_ratio = total_reli / len(students) if students else 0
+                
+                new_ratio = (reli_in_class + 1) / (len(class_students) + 1)
+                reli_penalty = abs(global_reli_ratio - new_ratio) * 35
+                score -= reli_penalty
+            
+            # Zusatzfach - Fokus beachten, sonst gleichmäßig verteilen
+            zf_focus = config.get('zf_focus', '')
+            student_zf = student.get('zusatzfach', '')
+            
+            if zf_focus:
+                # Klasse hat ZF-Fokus
+                if student_zf == zf_focus:
+                    score += 25  # Bonus: Schüler passt zum Fokus
+                else:
+                    score -= 15  # Strafe: Schüler passt nicht
+            elif class_students and student_zf:
+                # Kein Fokus -> gleichmäßig verteilen
+                zf_in_class = sum(1 for s in class_students if s.get('zusatzfach') == student_zf)
+                total_zf = sum(1 for s in students if s.get('zusatzfach') == student_zf)
+                global_zf_ratio = total_zf / len(students) if students else 0
+                
+                new_ratio = (zf_in_class + 1) / (len(class_students) + 1)
+                zf_penalty = abs(global_zf_ratio - new_ratio) * 30
+                score -= zf_penalty
             
             # Klassengröße - starke Strafe wenn über Zielgröße
             current_size = len(class_students)
@@ -988,6 +1102,10 @@ def auto_assign_classes():
                 eligible = list(range(num_classes))  # Fallback: alle Klassen
             assign_student_to_best_class(student, eligible)
         
+        # Schritt 4: Weise Schüler ohne Ku/Mu zu (alle Klassen möglich)
+        for student in other_students:
+            assign_student_to_best_class(student, list(range(num_classes)))
+        
         class_assignment_data['classes'] = classes
         
         # Berechne Statistiken pro Klasse
@@ -1016,9 +1134,80 @@ def auto_assign_classes():
             
             class_stats.append(stats)
         
+        # Kurs-Zusammenlegungsanalyse
+        MIN_COURSE_SIZE = 12
+        
+        course_merges = []
+        
+        def analyze_course_merges(category_key, category_values, label_map=None):
+            """Analysiert ob Kurse klassenübergreifend zusammengelegt werden sollten.
+            Bildet Gruppen aus beliebig vielen Klassen, bis Mindestgröße erreicht ist."""
+            for val in category_values:
+                classes_with_val = []
+                for class_id, class_students_list in classes.items():
+                    count = sum(1 for s in class_students_list if s.get(category_key) == val)
+                    if count > 0:
+                        cfg = class_config[class_id]
+                        classes_with_val.append({
+                            'class_id': class_id,
+                            'class_name': cfg.get('name', f'Klasse {class_id + 1}'),
+                            'count': count
+                        })
+                
+                # Alle Klassen die alleine zu klein sind
+                small = [c for c in classes_with_val if c['count'] < MIN_COURSE_SIZE]
+                
+                if len(small) < 2:
+                    continue
+                
+                # Sortiere nach Größe absteigend (große zuerst paaren, effizienter)
+                small.sort(key=lambda c: c['count'], reverse=True)
+                
+                display_name = label_map.get(val, val) if label_map else val
+                used = set()
+                
+                # Greedy-Gruppierung: Nehme Klassen in Gruppen zusammen bis >= MIN_COURSE_SIZE
+                while True:
+                    remaining = [i for i, c in enumerate(small) if i not in used]
+                    if len(remaining) < 2:
+                        break
+                    
+                    # Starte neue Gruppe mit der größten verbleibenden Klasse
+                    group = [remaining[0]]
+                    group_count = small[remaining[0]]['count']
+                    used.add(remaining[0])
+                    
+                    # Füge weitere Klassen hinzu bis Mindestgröße erreicht
+                    for idx in remaining[1:]:
+                        if group_count >= MIN_COURSE_SIZE:
+                            break
+                        group.append(idx)
+                        group_count += small[idx]['count']
+                        used.add(idx)
+                    
+                    # Nur Gruppen mit mindestens 2 Klassen ausgeben
+                    if len(group) >= 2:
+                        group_classes = [{'name': small[i]['class_name'], 'count': small[i]['count']} for i in group]
+                        parts = [f'{small[i]["class_name"]} ({small[i]["count"]})' for i in group]
+                        reason = ' + '.join(parts) + f' = {group_count} Schüler'
+                        
+                        course_merges.append({
+                            'course': display_name,
+                            'type': val,
+                            'classes': group_classes,
+                            'combined_count': group_count,
+                            'reason': reason
+                        })
+        
+        analyze_course_merges('kunst_musik', ['Ku', 'Mu'], {'Ku': 'Kunst', 'Mu': 'Musik'})
+        analyze_course_merges('reli_ethik', ['Rev', 'Rka', 'Eth'], {'Rev': 'Evangelisch', 'Rka': 'Katholisch', 'Eth': 'Ethik'})
+        analyze_course_merges('zusatzfach', ['Ek', 'Phil', 'Info', 'Spa', 'Bili'], {'Ek': 'Erdkunde', 'Phil': 'Philosophie', 'Info': 'Informatik', 'Spa': 'Spanisch', 'Bili': 'Bilingual'})
+        
         return jsonify({
             'success': True,
-            'classes': class_stats
+            'classes': class_stats,
+            'course_merges': course_merges,
+            'min_course_size': MIN_COURSE_SIZE
         })
     
     except Exception as e:
@@ -1124,6 +1313,8 @@ def export_class_assignment():
                 'Intern/Extern': student['intern_extern'],
                 '2. Fremdsprache': student['fremdsprache'],
                 'Kunst/Musik': student['kunst_musik'],
+                'Reli/Ethik': student.get('reli_ethik', ''),
+                'Zusatzfach': student.get('zusatzfach', ''),
                 'Bisherige Klasse': student.get('bisherige_klasse', ''),
                 'Neue Klasse': class_name
             })
