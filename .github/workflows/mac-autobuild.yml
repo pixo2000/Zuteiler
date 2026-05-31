@@ -1,0 +1,43 @@
+name: macOS Auto Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Clean old build folders
+        run: |
+          rm -rf build dist
+
+      - name: Build macOS app with PyInstaller
+        run: |
+          pyinstaller build_mac.spec
+
+      - name: Upload macOS app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Methodentag-Zuteilung-macOS-app
+          path: dist/Methodentag Zuteilung.app
+          if-no-files-found: error
