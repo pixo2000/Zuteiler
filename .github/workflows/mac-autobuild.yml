@@ -17,10 +17,15 @@ permissions:
 
 jobs:
   build-macos:
-    # macos-13 = Intel (x86_64). So läuft die App auf Intel-Macs UND
-    # auf Apple-Silicon-Macs (M1/M2/M3) über Rosetta. Das vermeidet
-    # Architektur-Probleme ("App kann nicht geöffnet werden").
-    runs-on: macos-13
+    # macos-14 = Apple Silicon (arm64). Der frühere Intel-Runner
+    # "macos-13" wurde von GitHub eingestellt, deshalb blieb der Job
+    # ewig in "Waiting for a runner to pick up this job..." hängen.
+    # Die App läuft nativ auf Apple-Silicon-Macs (M1/M2/M3).
+    runs-on: macos-14
+
+    # Verhindert, dass der Job unbegrenzt hängt, falls kein Runner
+    # verfügbar ist oder ein Schritt blockiert.
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
