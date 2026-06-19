@@ -847,13 +847,10 @@
                         <li><strong>extern / intern</strong> (intern, extern oder extern (Kreis))</li>
                         <li><strong>2. FS</strong> - Fremdsprache (F, L, L0, Spa)</li>
                         <li><strong>KU/MU</strong> - Kunst oder Musik (Ku, Mu)</li>
-<<<<<<< HEAD
                         <li><strong>Aufnahme</strong> - nur Schüler mit Eintrag "Aufnahme" werden berücksichtigt</li>
                         <li><strong>Wunschpartner</strong> (optional) - Freunde, mit denen der Schüler in eine Klasse möchte</li>
-=======
                         <li><strong>Reli/Ethik</strong> - Religion/Ethik (Rev, Rka, Eth)</li>
                         <li><strong>ZF</strong> - Zusatzfach (Ek, Phil, Info, Spa, Bili)</li>
->>>>>>> 12d6a2ed4dd06facda55ba5696c9a5b42f786793
                         <li><strong>bisherige Klasse</strong> (optional, nur für interne Schüler relevant)</li>
                     </ul>
                     <p><strong>⚠️ Rot markierte Zeilen werden ignoriert!</strong></p>
@@ -2229,23 +2226,13 @@
                                  draggable="true" 
                                  data-student-id="${s.id}"
                                  ondragstart="handleDragStart(event, ${s.id})"
-<<<<<<< HEAD
                                  oncontextmenu="showStudentContext(event, ${s.id})"
-                                 onclick="highlightWunschpartner(${s.id})"
-                                 style="padding: 8px 12px; margin: 4px 0; background: var(--md-sys-color-surface-container-high); border-radius: 6px; cursor: grab; display: flex; justify-content: space-between; align-items: center; font-size: 14px; transition: all 0.2s; border: 2px solid transparent;"
+                                 onclick="toggleStudentDetail(event, ${s.id}); highlightWunschpartner(${s.id})"
+                                 style="padding: 8px 12px; margin: 4px 0; background: var(--md-sys-color-surface-container-high); border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.2s; border: 2px solid transparent;"
                                  onmouseover="this.style.background='var(--md-sys-color-primary-container)'"
-                                 onmouseout="if(!this.classList.contains('wunsch-active') && !this.classList.contains('wunsch-highlight')) this.style.background='var(--md-sys-color-surface-container-high)'">
-                                <span>${s.nachname}, ${s.vorname}${(s.wunsch_ids && s.wunsch_ids.length) ? ' <span title="Hat Wunschpartner" style="color: var(--md-sys-color-primary);">★</span>' : ''}</span>
-                                <span style="font-size: 12px; color: var(--md-sys-color-on-surface-variant);">
-                                    ${s.geschlecht === 'm' ? '♂' : '♀'} | ${s.fremdsprache || '-'} | ${s.kunst_musik || '-'}
-                                </span>
-=======
-                                 onclick="toggleStudentDetail(event, ${s.id})"
-                                 style="padding: 8px 12px; margin: 4px 0; background: var(--md-sys-color-surface-container-high); border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.2s;"
-                                 onmouseover="this.style.background='var(--md-sys-color-primary-container)'"
-                                 onmouseout="if(!this.classList.contains('student-expanded')) this.style.background='var(--md-sys-color-surface-container-high)'">
+                                 onmouseout="if(!this.classList.contains('student-expanded') && !this.classList.contains('wunsch-active') && !this.classList.contains('wunsch-highlight')) this.style.background='var(--md-sys-color-surface-container-high)'">
                                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <span><span style="color: ${genderColor}; font-weight: 500;">${genderIcon}</span> ${s.nachname}, ${s.vorname}</span>
+                                    <span><span style="color: ${genderColor}; font-weight: 500;">${genderIcon}</span> ${s.nachname}, ${s.vorname}${(s.wunsch_ids && s.wunsch_ids.length) ? ' <span title="Hat Wunschpartner" style="color: var(--md-sys-color-primary);">★</span>' : ''}</span>
                                     <span style="font-size: 11px; color: var(--md-sys-color-on-surface-variant); display: flex; gap: 6px; align-items: center;">
                                         ${kmIcon} ${s.fremdsprache || ''} ${reliLabel ? '· ' + reliLabel : ''} ${s.zusatzfach ? '· ' + s.zusatzfach : ''} ${ieIcon}
                                     </span>
@@ -2260,9 +2247,9 @@
                                         <div><strong>Zusatzfach:</strong> ${s.zusatzfach || '-'}</div>
                                         <div><strong>Bisherige Klasse:</strong> ${s.bisherige_klasse || '-'}</div>
                                         <div><strong>Aktuelle Klasse:</strong> ${cls.name}</div>
+                                        <div style="grid-column: 1 / -1;"><strong>Wunschpartner:</strong> ${(s.wunsch_names && s.wunsch_names.length) ? s.wunsch_names.join(', ') : '-'}</div>
                                     </div>
                                 </div>
->>>>>>> 12d6a2ed4dd06facda55ba5696c9a5b42f786793
                             </div>
                         `}).join('')}
                     </div>
@@ -2271,7 +2258,6 @@
             });
         }
         
-<<<<<<< HEAD
         let highlightedStudentId = null;
         
         function clearWunschHighlight() {
@@ -2320,7 +2306,8 @@
                     el.style.borderColor = 'var(--md-sys-color-tertiary)';
                 }
             });
-=======
+        }
+        
         function displayCourseMerges(merges, minSize) {
             const container = document.getElementById('courseMergesContainer');
             if (!merges || merges.length === 0) {
@@ -2361,7 +2348,6 @@
             
             html += '</div></div>';
             container.innerHTML = html;
->>>>>>> 12d6a2ed4dd06facda55ba5696c9a5b42f786793
         }
         
         let draggedStudentId = null;
@@ -2435,44 +2421,6 @@
                 itemEl.classList.remove('student-expanded');
                 itemEl.style.background = 'var(--md-sys-color-surface-container-high)';
             }
-<<<<<<< HEAD
-            
-            if (!student) return;
-            
-            klassenData.selectedStudentId = studentId;
-            
-            const menu = document.getElementById('studentContextMenu');
-            const title = document.getElementById('contextMenuTitle');
-            const content = document.getElementById('contextMenuContent');
-            const moveSelect = document.getElementById('contextMenuMoveClass');
-            
-            title.textContent = `${student.vorname} ${student.nachname}`;
-            content.innerHTML = `
-                <div><strong>Geschlecht:</strong> ${student.geschlecht === 'm' ? 'Männlich' : 'Weiblich'}</div>
-                <div><strong>Status:</strong> ${student.intern_extern === 'intern' ? 'Intern' : 'Extern'}</div>
-                <div><strong>2. Fremdsprache:</strong> ${student.fremdsprache || '-'}</div>
-                <div><strong>Kunst/Musik:</strong> ${student.kunst_musik || '-'}</div>
-                <div><strong>Bisherige Klasse:</strong> ${student.bisherige_klasse || '-'}</div>
-                <div><strong>Wunschpartner:</strong> ${(student.wunsch_names && student.wunsch_names.length) ? student.wunsch_names.join(', ') : '-'}</div>
-                <div><strong>Aktuelle Klasse:</strong> ${klassenData.classes.find(c => c.id === student.assigned_class)?.name || '-'}</div>
-            `;
-            
-            // Fülle Dropdown
-            moveSelect.innerHTML = klassenData.classes.map(c => 
-                `<option value="${c.id}" ${c.id === student.assigned_class ? 'selected' : ''}>${c.name}</option>`
-            ).join('');
-            
-            // Positioniere Menü
-            menu.style.left = event.pageX + 'px';
-            menu.style.top = event.pageY + 'px';
-            menu.classList.remove('hidden');
-            
-            // Schließe bei Klick außerhalb
-            setTimeout(() => {
-                document.addEventListener('click', closeStudentContext);
-            }, 100);
-=======
->>>>>>> 12d6a2ed4dd06facda55ba5696c9a5b42f786793
         }
         
         async function moveStudentInline(event, studentId) {

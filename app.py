@@ -618,17 +618,14 @@ def upload_class_list():
                     column_mapping['fremdsprache'] = col_idx
                 elif 'ku/mu' in cell_value or cell_value == 'kumu' or cell_value == 'ku / mu':
                     column_mapping['kunst_musik'] = col_idx
-<<<<<<< HEAD
                 elif 'aufnahme' in cell_value:
                     column_mapping['aufnahme'] = col_idx
                 elif 'wunschpartner' in cell_value or 'wunsch' in cell_value:
                     column_mapping['wunschpartner'] = col_idx
-=======
                 elif 'reli' in cell_value and 'ethik' in cell_value:
                     column_mapping['reli_ethik'] = col_idx
                 elif cell_value == 'zf' or cell_value == 'zusatzfach':
                     column_mapping['zusatzfach'] = col_idx
->>>>>>> 12d6a2ed4dd06facda55ba5696c9a5b42f786793
                 elif 'bisherige klasse' in cell_value or ('klasse' in cell_value and 'bisherige' in cell_value):
                     column_mapping['bisherige_klasse'] = col_idx
         
@@ -718,15 +715,13 @@ def upload_class_list():
                     print(f"  ⬜ Zeile {row_num}: Übersprungen (Name leer)")
                 continue
             
-<<<<<<< HEAD
             # Filter: Nur Schüler mit "Aufnahme" in der Aufnahme-Spalte werden eingebracht
             if 'aufnahme' not in aufnahme.strip().lower():
                 continue
-=======
+            
             # Log erste paar Schüler
             if student_id < 3:
                 print(f"  👤 Zeile {row_num}: {vorname} {nachname}, Geschl={geschlecht}, I/E={intern_extern}, FS={fremdsprache}, KuMu={kunst_musik}, Reli={reli_ethik}, ZF={zusatzfach}")
->>>>>>> 12d6a2ed4dd06facda55ba5696c9a5b42f786793
             
             # Normalisiere Werte
             if geschlecht in ['m', 'männlich', 'male']:
@@ -839,10 +834,9 @@ def upload_class_list():
             
             student_id += 1
         
-<<<<<<< HEAD
         # Wunschpartner-Namen den Schüler-IDs zuordnen (nur gültige Schüler)
         resolve_wunschpartner(students)
-=======
+        
         print(f"\n📈 Zusammenfassung:")
         print(f"  Zeilen geprüft: {total_rows_checked}")
         print(f"  Rot übersprungen: {skipped_red}")
@@ -850,7 +844,6 @@ def upload_class_list():
         print(f"  Gültige Schüler: {len(students)}")
         print(f"  Ungültige Schüler: {len(invalid_students)}")
         print(f"{'='*60}")
->>>>>>> 12d6a2ed4dd06facda55ba5696c9a5b42f786793
         
         # Statistiken berechnen
         male_count = sum(1 for s in students if s['geschlecht'] == 'm')
@@ -1094,7 +1087,6 @@ def auto_assign_classes():
                 )
                 score -= same_old_class_count * 10
             
-<<<<<<< HEAD
             # Wunschpartner: Bonus, wenn gewünschte Freunde bereits in dieser Klasse sind
             wunsch_ids = student.get('wunsch_ids') or []
             if wunsch_ids:
@@ -1104,7 +1096,7 @@ def auto_assign_classes():
                 for s in class_students:
                     if s['id'] in wunsch_ids and student['id'] in (s.get('wunsch_ids') or []):
                         score += 20
-=======
+            
             # Reli/Ethik - Fokus beachten, sonst gleichmäßig verteilen
             reli_focus = config.get('reli_focus', '')
             student_reli = student.get('reli_ethik', '')
@@ -1144,7 +1136,6 @@ def auto_assign_classes():
                 new_ratio = (zf_in_class + 1) / (len(class_students) + 1)
                 zf_penalty = abs(global_zf_ratio - new_ratio) * 30
                 score -= zf_penalty
->>>>>>> 12d6a2ed4dd06facda55ba5696c9a5b42f786793
             
             # Klassengröße - starke Strafe wenn über Zielgröße
             current_size = len(class_students)
