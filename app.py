@@ -504,6 +504,65 @@ def get_delete_timestamp():
 # KLASSENZUTEILUNG API
 # ============================================================================
 
+def _normalize_name(name):
+    """Normalisiert einen Namen für den Vergleich (lowercase, getrimmt)"""
+    return ' '.join(str(name).strip().lower().split())
+
+
+def parse_wunschpartner(raw):
+    """Zerlegt eine Wunschpartner-Angabe in einzelne Namen.
+
+    Mehrere Wunschpartner werden durch Komma, Semikolon, Schrägstrich,
+    Zeilenumbruch oder das Wort "und" getrennt.
+    """
+    if not raw:
+        return []
+    text = str(raw)
+    # Vereinheitliche Trennzeichen zu Komma
+    for sep in ['\n', '\r', ';', '/', '|', ' und ', ' & ', '&']:
+        text = text.replace(sep, ',')
+    parts = [p.strip() for p in text.split(',')]
+    return [p for p in parts if p]
+
+
+def resolve_wunschpartner(students):
+    """Ordnet die Wunschpartner-Namen jedes Schülers den passenden Schüler-IDs zu.
+
+    Setzt für jeden Schüler 'wunsch_names' (geparste Namen) und 'wunsch_ids'
+    (gefundene IDs der Wunschpartner). Die Zuordnung ist wechselseitig nicht
+    erzwungen – nur tatsächlich gefundene Namen werden verlinkt.
+    """
+    # Index zum schnellen Nachschlagen anlegen
+    by_full = {}          # "vorname nachname" -> [ids]
+    by_full_rev = {}      # "nachname vorname" -> [ids]
+    by_first = defaultdict(list)  # "vorname" -> [ids]
+    for s in students:
+        full = _normalize_name(f"{s['vorname']} {s['nachname']}")
+        rev = _normalize_name(f"{s['nachname']} {s['vorname']}")
+        by_full.setdefault(full, []).append(s['id'])
+        by_full_rev.setdefault(rev, []).append(s['id'])
+        if s['vorname']:
+            by_first[_normalize_name(s['vorname'])].append(s['id'])
+
+    for s in students:
+        names = parse_wunschpartner(s.get('wunschpartner_raw', ''))
+        s['wunsch_names'] = names
+        found_ids = []
+        for name in names:
+            key = _normalize_name(name)
+            ids = by_full.get(key) or by_full_rev.get(key)
+            if not ids:
+                # Fallback: eindeutiger Vorname
+                first_matches = by_first.get(key, [])
+                if len(first_matches) == 1:
+                    ids = first_matches
+            if ids:
+                for sid in ids:
+                    if sid != s['id'] and sid not in found_ids:
+                        found_ids.append(sid)
+        s['wunsch_ids'] = found_ids
+
+
 @app.route('/api/klassenzuteilung/upload', methods=['POST'])
 def upload_class_list():
     """Lädt eine Excel-Datei mit Schülerliste für Klassenzuteilung hoch"""
@@ -548,6 +607,10 @@ def upload_class_list():
                     column_mapping['fremdsprache'] = col_idx
                 elif 'ku/mu' in cell_value or cell_value == 'kumu' or cell_value == 'ku / mu':
                     column_mapping['kunst_musik'] = col_idx
+                elif 'aufnahme' in cell_value:
+                    column_mapping['aufnahme'] = col_idx
+                elif 'wunschpartner' in cell_value or 'wunsch' in cell_value:
+                    column_mapping['wunschpartner'] = col_idx
                 elif 'bisherige klasse' in cell_value or ('klasse' in cell_value and 'bisherige' in cell_value):
                     column_mapping['bisherige_klasse'] = col_idx
         
@@ -565,6 +628,8 @@ def upload_class_list():
             missing.append('2. FS')
         if 'kunst_musik' not in column_mapping:
             missing.append('KU/MU')
+        if 'aufnahme' not in column_mapping:
+            missing.append('Aufnahme')
         
         if missing:
             return jsonify({
@@ -614,9 +679,15 @@ def upload_class_list():
             fremdsprache = get_cell_value('fremdsprache')
             kunst_musik = get_cell_value('kunst_musik')
             bisherige_klasse = get_cell_value('bisherige_klasse')
+            aufnahme = get_cell_value('aufnahme')
+            wunschpartner_raw = get_cell_value('wunschpartner')
             
             # Überspringe leere Zeilen
             if not nachname and not vorname:
+                continue
+            
+            # Filter: Nur Schüler mit "Aufnahme" in der Aufnahme-Spalte werden eingebracht
+            if 'aufnahme' not in aufnahme.strip().lower():
                 continue
             
             # Normalisiere Werte
@@ -667,6 +738,9 @@ def upload_class_list():
                 'fremdsprache': fremdsprache,
                 'kunst_musik': kunst_musik,
                 'bisherige_klasse': bisherige_klasse,
+                'wunschpartner_raw': wunschpartner_raw,
+                'wunsch_names': [],
+                'wunsch_ids': [],
                 'assigned_class': None
             }
             
@@ -697,6 +771,9 @@ def upload_class_list():
                 invalid_students.append(student)
             
             student_id += 1
+        
+        # Wunschpartner-Namen den Schüler-IDs zuordnen (nur gültige Schüler)
+        resolve_wunschpartner(students)
         
         # Statistiken berechnen
         male_count = sum(1 for s in students if s['geschlecht'] == 'm')
@@ -900,6 +977,16 @@ def auto_assign_classes():
                 )
                 score -= same_old_class_count * 10
             
+            # Wunschpartner: Bonus, wenn gewünschte Freunde bereits in dieser Klasse sind
+            wunsch_ids = student.get('wunsch_ids') or []
+            if wunsch_ids:
+                friends_in_class = sum(1 for s in class_students if s['id'] in wunsch_ids)
+                score += friends_in_class * 60
+                # Zusätzlicher Bonus, wenn der Wunsch beidseitig ist
+                for s in class_students:
+                    if s['id'] in wunsch_ids and student['id'] in (s.get('wunsch_ids') or []):
+                        score += 20
+            
             # Klassengröße - starke Strafe wenn über Zielgröße
             current_size = len(class_students)
             max_size = max_class_sizes[class_id]
@@ -1089,6 +1176,7 @@ def export_class_assignment():
                 '2. Fremdsprache': student['fremdsprache'],
                 'Kunst/Musik': student['kunst_musik'],
                 'Bisherige Klasse': student.get('bisherige_klasse', ''),
+                'Wunschpartner': ', '.join(student.get('wunsch_names', [])),
                 'Neue Klasse': class_name
             })
         

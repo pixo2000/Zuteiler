@@ -847,6 +847,8 @@
                         <li><strong>extern / intern</strong> (intern, extern oder extern (Kreis))</li>
                         <li><strong>2. FS</strong> - Fremdsprache (F, L, L0, Spa)</li>
                         <li><strong>KU/MU</strong> - Kunst oder Musik (Ku, Mu)</li>
+                        <li><strong>Aufnahme</strong> - nur Schüler mit Eintrag "Aufnahme" werden berücksichtigt</li>
+                        <li><strong>Wunschpartner</strong> (optional) - Freunde, mit denen der Schüler in eine Klasse möchte</li>
                         <li><strong>bisherige Klasse</strong> (optional, nur für interne Schüler relevant)</li>
                     </ul>
                     <p><strong>⚠️ Rot markierte Zeilen werden ignoriert!</strong></p>
@@ -1984,10 +1986,11 @@
                                  data-student-id="${s.id}"
                                  ondragstart="handleDragStart(event, ${s.id})"
                                  oncontextmenu="showStudentContext(event, ${s.id})"
-                                 style="padding: 8px 12px; margin: 4px 0; background: var(--md-sys-color-surface-container-high); border-radius: 6px; cursor: grab; display: flex; justify-content: space-between; align-items: center; font-size: 14px; transition: all 0.2s;"
+                                 onclick="highlightWunschpartner(${s.id})"
+                                 style="padding: 8px 12px; margin: 4px 0; background: var(--md-sys-color-surface-container-high); border-radius: 6px; cursor: grab; display: flex; justify-content: space-between; align-items: center; font-size: 14px; transition: all 0.2s; border: 2px solid transparent;"
                                  onmouseover="this.style.background='var(--md-sys-color-primary-container)'"
-                                 onmouseout="this.style.background='var(--md-sys-color-surface-container-high)'">
-                                <span>${s.nachname}, ${s.vorname}</span>
+                                 onmouseout="if(!this.classList.contains('wunsch-active') && !this.classList.contains('wunsch-highlight')) this.style.background='var(--md-sys-color-surface-container-high)'">
+                                <span>${s.nachname}, ${s.vorname}${(s.wunsch_ids && s.wunsch_ids.length) ? ' <span title="Hat Wunschpartner" style="color: var(--md-sys-color-primary);">★</span>' : ''}</span>
                                 <span style="font-size: 12px; color: var(--md-sys-color-on-surface-variant);">
                                     ${s.geschlecht === 'm' ? '♂' : '♀'} | ${s.fremdsprache || '-'} | ${s.kunst_musik || '-'}
                                 </span>
@@ -1996,6 +1999,56 @@
                     </div>
                 `;
                 container.appendChild(classDiv);
+            });
+        }
+        
+        let highlightedStudentId = null;
+        
+        function clearWunschHighlight() {
+            document.querySelectorAll('.student-item').forEach(el => {
+                el.classList.remove('wunsch-active', 'wunsch-highlight');
+                el.style.background = 'var(--md-sys-color-surface-container-high)';
+                el.style.borderColor = 'transparent';
+            });
+        }
+        
+        function highlightWunschpartner(studentId) {
+            // Toggle: erneuter Klick auf denselben Schüler hebt Markierung auf
+            if (highlightedStudentId === studentId) {
+                clearWunschHighlight();
+                highlightedStudentId = null;
+                return;
+            }
+            
+            clearWunschHighlight();
+            highlightedStudentId = studentId;
+            
+            // Finde Schüler
+            let student = null;
+            for (const cls of klassenData.classes) {
+                const found = cls.students.find(s => s.id === studentId);
+                if (found) { student = found; break; }
+            }
+            if (!student) return;
+            
+            const wunschIds = student.wunsch_ids || [];
+            
+            // Markiere den ausgewählten Schüler
+            const selEl = document.querySelector(`.student-item[data-student-id="${studentId}"]`);
+            if (selEl) {
+                selEl.classList.add('wunsch-active');
+                selEl.style.background = 'var(--md-sys-color-primary-container)';
+                selEl.style.borderColor = 'var(--md-sys-color-primary)';
+            }
+            
+            // Markiere die Wunschpartner
+            wunschIds.forEach(wid => {
+                const el = document.querySelector(`.student-item[data-student-id="${wid}"]`);
+                if (el) {
+                    el.classList.add('wunsch-highlight');
+                    el.style.background = 'var(--md-sys-color-tertiary-container)';
+                    el.style.borderColor = 'var(--md-sys-color-tertiary)';
+                }
             });
         }
         
@@ -2071,6 +2124,7 @@
                 <div><strong>2. Fremdsprache:</strong> ${student.fremdsprache || '-'}</div>
                 <div><strong>Kunst/Musik:</strong> ${student.kunst_musik || '-'}</div>
                 <div><strong>Bisherige Klasse:</strong> ${student.bisherige_klasse || '-'}</div>
+                <div><strong>Wunschpartner:</strong> ${(student.wunsch_names && student.wunsch_names.length) ? student.wunsch_names.join(', ') : '-'}</div>
                 <div><strong>Aktuelle Klasse:</strong> ${klassenData.classes.find(c => c.id === student.assigned_class)?.name || '-'}</div>
             `;
             
