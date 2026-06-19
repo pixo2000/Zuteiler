@@ -582,11 +582,15 @@ def upload_class_list():
         
         # Load the workbook
         wb = load_workbook(file, data_only=False)
-        ws = wb.active
+        # Verwende immer das Sheet "Basisdaten", sonst das erste Sheet
+        if 'Basisdaten' in wb.sheetnames:
+            ws = wb['Basisdaten']
+        else:
+            ws = wb[wb.sheetnames[0]]
         
         print(f"\n{'='*60}")
         print(f"📋 KLASSENZUTEILUNG UPLOAD: {file.filename}")
-        print(f"Aktives Sheet: '{ws.title}'")
+        print(f"Verwendetes Sheet: '{ws.title}'")
         print(f"Alle Sheets: {wb.sheetnames}")
         print(f"Dimensionen: {ws.dimensions}")
         print(f"Max Row: {ws.max_row}, Max Col: {ws.max_column}")
