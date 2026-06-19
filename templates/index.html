@@ -1041,6 +1041,10 @@
                     </button>
                 </div>
                 
+                <!-- Wunschpartner Gesamtübersicht -->
+                <div id="wunschpartnerSummary" class="hidden" style="margin-bottom: 24px;">
+                </div>
+                
                 <!-- Klassen Container -->
                 <div id="klassenContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 16px;">
                     <!-- Wird dynamisch generiert -->
@@ -2178,6 +2182,26 @@
                 return { ku, mu };
             }
             
+            // Globale Zuordnung Schüler-ID -> Klassen-ID (für Wunschpartner-Auswertung)
+            const studentClassMap = {};
+            classes.forEach(cls => {
+                (cls.students || []).forEach(s => { studentClassMap[s.id] = cls.id; });
+            });
+            
+            // Wunschpartner-Statistik für eine Klasse:
+            // - withWish: Schüler mit mind. einem Wunschpartner (gesamt)
+            // - fulfilled: Schüler, deren Wunsch (mind. ein Partner in derselben Klasse) erfüllt ist
+            function getFriendStats(cls) {
+                let withWish = 0, fulfilled = 0;
+                (cls.students || []).forEach(s => {
+                    const ids = s.wunsch_ids || [];
+                    if (ids.length === 0) return;
+                    withWish++;
+                    if (ids.some(wid => studentClassMap[wid] === cls.id)) fulfilled++;
+                });
+                return { withWish, fulfilled };
+            }
+            
             classes.forEach((cls, idx) => {
                 const classDiv = document.createElement('div');
                 classDiv.className = 'klasse-box';
@@ -2194,6 +2218,10 @@
                 // Ku/Mu Stats
                 const kuMu = getKuMuStats(cls.students || []);
                 
+                // Wunschpartner-Statistik
+                const friendStats = getFriendStats(cls);
+                const friendPercent = friendStats.withWish > 0 ? ((friendStats.fulfilled / friendStats.withWish) * 100).toFixed(0) : 0;
+                
                 // Sortiere Schüler
                 const sortedStudents = sortStudents(cls.students || [], sortBy);
                 
@@ -2201,6 +2229,10 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                         <h3 style="margin: 0; color: var(--md-sys-color-on-surface);">${cls.name}</h3>
                         <span style="background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); padding: 4px 12px; border-radius: 12px; font-size: 14px;">${cls.total} Schüler</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 12px; padding: 6px 10px; background: var(--md-sys-color-tertiary-container); color: var(--md-sys-color-on-tertiary-container); border-radius: 8px; font-size: 13px;">
+                        <span style="color: var(--md-sys-color-primary);">★</span>
+                        <strong>Freunde zusammen:</strong> ${friendStats.fulfilled} / ${friendStats.withWish}${friendStats.withWish > 0 ? ' (' + friendPercent + '%)' : ''}
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; font-size: 13px; color: var(--md-sys-color-on-surface-variant);">
                         <div>♂ ${cls.male} / ♀ ${cls.female} (${malePercent}% m)</div>
@@ -2256,6 +2288,41 @@
                 `;
                 container.appendChild(classDiv);
             });
+            
+            // Wunschpartner-Gesamtübersicht (über alle Klassen)
+            let totalWithWish = 0, totalFulfilled = 0;
+            classes.forEach(cls => {
+                (cls.students || []).forEach(s => {
+                    const ids = s.wunsch_ids || [];
+                    if (ids.length === 0) return;
+                    totalWithWish++;
+                    if (ids.some(wid => studentClassMap[wid] === cls.id)) totalFulfilled++;
+                });
+            });
+            const summaryEl = document.getElementById('wunschpartnerSummary');
+            if (summaryEl) {
+                if (totalWithWish === 0) {
+                    summaryEl.classList.add('hidden');
+                    summaryEl.innerHTML = '';
+                } else {
+                    const pct = ((totalFulfilled / totalWithWish) * 100).toFixed(0);
+                    summaryEl.classList.remove('hidden');
+                    summaryEl.innerHTML = `
+                        <div style="background: var(--md-sys-color-tertiary-container); color: var(--md-sys-color-on-tertiary-container); border-radius: 12px; padding: 16px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 22px; color: var(--md-sys-color-primary);">★</span>
+                                <strong style="font-size: 15px;">Wunschpartner gesamt</strong>
+                            </div>
+                            <div style="font-size: 14px;">
+                                <strong>${totalFulfilled}</strong> von <strong>${totalWithWish}</strong> Schülern mit Wunsch haben mindestens einen Freund in ihrer Klasse
+                            </div>
+                            <div style="margin-left: auto; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); padding: 6px 14px; border-radius: 14px; font-size: 15px; font-weight: 600;">
+                                ${pct}% erfüllt
+                            </div>
+                        </div>
+                    `;
+                }
+            }
         }
         
         let highlightedStudentId = null;
