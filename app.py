@@ -997,6 +997,17 @@ def auto_assign_classes():
         random.shuffle(mu_students)
         random.shuffle(other_students)
         
+        def language_match(student, config):
+            """True, wenn der Schüler zum Sprachfokus der Klasse passt.
+            Bei Sprachfokus müssen 100% der Schüler dieses Fach haben (harte Bedingung)."""
+            lang_focus = config.get('language_focus', '')
+            if not lang_focus:
+                return True  # Keine Sprachfokus-Beschränkung
+            student_lang = student.get('fremdsprache', '')
+            if lang_focus == 'L_all':
+                return student_lang in ['L', 'L0']
+            return student_lang == lang_focus
+        
         # Hilfsfunktion zur Berechnung des Scores für Zuweisung (ohne Kunst/Musik-Check)
         def assignment_score(student, class_id, current_classes):
             config = class_config[class_id]
@@ -1156,6 +1167,14 @@ def auto_assign_classes():
             best_class = None
             best_score = float('-inf')
             
+            # Harte Bedingung: Bei Sprachfokus dürfen nur passende Schüler in die Klasse
+            eligible_classes = [c for c in eligible_classes if language_match(student, class_config[c])]
+            
+            # Sicherheitsnetz: Falls keine passende Klasse übrig ist, nimm alle Klassen
+            # ohne Sprachfokus (damit der Schüler überhaupt zugeteilt werden kann)
+            if not eligible_classes:
+                eligible_classes = [c for c in range(num_classes) if not class_config[c].get('language_focus')]
+            
             for class_id in eligible_classes:
                 # Prüfe ob Klasse noch Platz hat
                 if len(classes[class_id]) >= max_class_sizes[class_id]:
@@ -1167,7 +1186,7 @@ def auto_assign_classes():
                     best_score = score
                     best_class = class_id
             
-            # Fallback: Wenn alle Klassen "voll" sind, nimm die mit wenigsten Schülern
+            # Fallback: Wenn alle passenden Klassen "voll" sind, nimm die mit wenigsten Schülern
             if best_class is None and eligible_classes:
                 best_class = min(eligible_classes, key=lambda c: len(classes[c]))
             
