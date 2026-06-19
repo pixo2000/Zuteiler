@@ -1,6 +1,43 @@
 # Anleitung: macOS App erstellen
 
-## Für dich (als Entwickler)
+## Automatisch über GitHub (empfohlen)
+
+Du brauchst **keinen Mac**. Ein GitHub-Actions-Workflow baut die App auf einem
+Mac-Server, signiert sie und veröffentlicht sie als **Release**.
+
+So löst du einen Build aus:
+- **Einfach**: Änderungen auf den `main`-Branch pushen → es entsteht ein
+  Release namens `build-<Nummer>`.
+- **Mit Versionsnummer**: Einen Tag pushen, z. B.
+  ```bash
+  git tag v1.0.0
+  git push origin v1.0.0
+  ```
+  → es entsteht ein Release `v1.0.0`.
+- **Manuell**: Auf GitHub unter **Actions → macOS Build & Release →
+  "Run workflow"**.
+
+Die fertige `Methodentag-Zuteilung-macOS.zip` findest du danach unter
+**Releases** (rechts auf der Repo-Startseite) oder unter **Actions** als
+Artefakt.
+
+### Warum war die App vorher "beschädigt"?
+- Der alte Workflow lud das `.app`-Bundle direkt hoch. GitHub packt es dann
+  erneut in ein ZIP und **zerstört dabei die internen Symlinks/Rechte** – die
+  entpackte App war dadurch defekt.
+- Außerdem war die App **nicht signiert**, weshalb macOS sie nach dem Download
+  als "beschädigt" markiert.
+
+Der neue Workflow **signiert** die App (ad-hoc) und packt sie mit `ditto`, das
+die Bundle-Struktur korrekt erhält.
+
+> **Hinweis zu "pip & Co.":** Die Nutzerin braucht **kein** Python und **kein**
+> pip auf ihrem Mac. PyInstaller packt den Python-Interpreter und alle
+> Abhängigkeiten direkt in die `.app`.
+
+---
+
+## Manuell auf einem Mac (Alternative)
 
 ### Voraussetzungen
 Du brauchst Zugang zu einem Mac, um die `.app`-Datei zu bauen.
@@ -36,23 +73,28 @@ pyinstaller build_mac.spec
 ## Für die Lehrerin (Nutzerin)
 
 ### Installation
-1. Kopiere die `Methodentag Zuteilung.app` auf deinen Mac
-2. Lege sie z.B. in den `Programme` (Applications) Ordner oder auf den Desktop
+1. Die `Methodentag-Zuteilung-macOS.zip` herunterladen und entpacken (Doppelklick)
+2. Die `Methodentag Zuteilung.app` in den Ordner **Programme** (Applications) ziehen
 
 ### Erste Nutzung
-1. **Doppelklick** auf die App
-2. Falls eine Warnung erscheint ("App von nicht verifiziertem Entwickler"):
-   - **Rechtsklick** auf die App
-   - Wähle **"Öffnen"**
-   - Bestätige mit **"Öffnen"**
-   - Dies musst du nur beim ersten Mal machen!
+1. **Rechtsklick** auf die App → **"Öffnen"** → erneut **"Öffnen"** bestätigen
+   (nur beim ersten Mal nötig)
+2. Die App startet automatisch den Browser mit der Anwendung
 
-3. Die App startet automatisch deinen Browser mit der Anwendung
+### ⚠️ Falls macOS meldet: "App ist beschädigt"
+Das liegt **nicht** an einem echten Defekt, sondern an der macOS-Sicherheits-
+sperre (Gatekeeper) für nicht bei Apple notarisierte Apps. Einmalig im
+**Terminal** ausführen (Programme → Dienstprogramme → Terminal):
+
+```bash
+xattr -cr "/Applications/Methodentag Zuteilung.app"
+```
+
+Danach die App per **Rechtsklick → Öffnen** starten.
 
 ### Nutzung
 - **Starten**: Doppelklick auf die App
 - **Beenden**: Schließe das Browser-Fenster oder beende die App (Cmd+Q)
-- **Daten**: Lege deine `daten.csv` in denselben Ordner wie die App
 
 ---
 

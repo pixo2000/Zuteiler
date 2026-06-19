@@ -1,17 +1,26 @@
-name: macOS Auto Build
+name: macOS Build & Release
 
 on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
   pull_request:
     branches:
       - main
   workflow_dispatch:
 
+# Benötigt, damit der Workflow ein Release erstellen darf
+permissions:
+  contents: write
+
 jobs:
   build-macos:
-    runs-on: macos-latest
+    # macos-13 = Intel (x86_64). So läuft die App auf Intel-Macs UND
+    # auf Apple-Silicon-Macs (M1/M2/M3) über Rosetta. Das vermeidet
+    # Architektur-Probleme ("App kann nicht geöffnet werden").
+    runs-on: macos-13
 
     steps:
       - name: Checkout repository
@@ -35,9 +44,62 @@ jobs:
         run: |
           pyinstaller build_mac.spec
 
+      - name: Ad-hoc code sign the app
+        # Eine Ad-hoc-Signatur (-) macht das Bundle in sich konsistent.
+        # Ohne sie meldet macOS die App nach dem Download oft als "beschädigt".
+        run: |
+          codesign --force --deep --sign - "dist/Methodentag Zuteilung.app"
+          codesign --verify --deep --strict --verbose=2 "dist/Methodentag Zuteilung.app" || true
+
+      - name: Package app with ditto (preserves bundle structure)
+        # WICHTIG: 'ditto' statt 'zip', damit Symlinks, Rechte und
+        # macOS-Metadaten im .app-Bundle erhalten bleiben. So bleibt die
+        # App nach dem Entpacken funktionsfähig (nicht "beschädigt").
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent \
+            "dist/Methodentag Zuteilung.app" \
+            "Methodentag-Zuteilung-macOS.zip"
+
       - name: Upload macOS app artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Methodentag-Zuteilung-macOS-app
-          path: dist/Methodentag Zuteilung.app
+          name: Methodentag-Zuteilung-macOS
+          path: Methodentag-Zuteilung-macOS.zip
           if-no-files-found: error
+
+      - name: Determine release tag
+        id: tag
+        # Bei einem Tag-Push (v1.0.0) wird dieser Tag verwendet, sonst
+        # ein automatischer Tag anhand der Build-Nummer.
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=build-${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub Release
+        # Release nur erstellen, wenn nicht in einem Pull Request gebaut wird
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: Methodentag Zuteilung (macOS) ${{ steps.tag.outputs.tag }}
+          files: Methodentag-Zuteilung-macOS.zip
+          body: |
+            ## Methodentag Zuteilung – macOS App
+
+            ### Installation
+            1. ZIP herunterladen und entpacken (Doppelklick).
+            2. `Methodentag Zuteilung.app` in den Ordner **Programme** ziehen.
+
+            ### Falls macOS "App ist beschädigt" meldet
+            Das passiert, weil die App nicht bei Apple notarisiert ist
+            (kostet 99 $/Jahr). Einmalig im **Terminal** ausführen:
+
+            ```bash
+            xattr -cr "/Applications/Methodentag Zuteilung.app"
+            ```
+
+            Danach die App per **Rechtsklick → Öffnen** starten.
+            Dieser Schritt ist nur beim ersten Mal nötig.
