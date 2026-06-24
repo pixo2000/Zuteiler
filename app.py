@@ -997,16 +997,43 @@ def auto_assign_classes():
         random.shuffle(mu_students)
         random.shuffle(other_students)
         
-        def language_match(student, config):
-            """True, wenn der Schüler zum Sprachfokus der Klasse passt.
-            Bei Sprachfokus müssen 100% der Schüler dieses Fach haben (harte Bedingung)."""
+        def has_any_focus(config):
+            """True, wenn die Klasse mindestens eine Fokus-Beschränkung hat."""
+            return bool(
+                config.get('language_focus') or config.get('art_music')
+                or config.get('reli_focus') or config.get('zf_focus')
+            )
+
+        def focus_match(student, config):
+            """True, wenn der Schüler zu ALLEN gesetzten Fokus-Beschränkungen der Klasse passt.
+            Jeder gesetzte Fokus ist eine harte Bedingung: nur passende Schüler dürfen
+            in die Klasse (z. B. eine Geo-Klasse darf keine Info-Schüler enthalten)."""
+            # Sprachfokus
             lang_focus = config.get('language_focus', '')
-            if not lang_focus:
-                return True  # Keine Sprachfokus-Beschränkung
-            student_lang = student.get('fremdsprache', '')
-            if lang_focus == 'L_all':
-                return student_lang in ['L', 'L0']
-            return student_lang == lang_focus
+            if lang_focus:
+                student_lang = student.get('fremdsprache', '')
+                if lang_focus == 'L_all':
+                    if student_lang not in ['L', 'L0']:
+                        return False
+                elif student_lang != lang_focus:
+                    return False
+
+            # Kunst/Musik-Fokus
+            km_focus = config.get('art_music', '')
+            if km_focus and student.get('kunst_musik', '') != km_focus:
+                return False
+
+            # Reli/Ethik-Fokus
+            reli_focus = config.get('reli_focus', '')
+            if reli_focus and student.get('reli_ethik', '') != reli_focus:
+                return False
+
+            # Zusatzfach-Fokus
+            zf_focus = config.get('zf_focus', '')
+            if zf_focus and student.get('zusatzfach', '') != zf_focus:
+                return False
+
+            return True
         
         # Hilfsfunktion zur Berechnung des Scores für Zuweisung (ohne Kunst/Musik-Check)
         def assignment_score(student, class_id, current_classes):
@@ -1167,13 +1194,14 @@ def auto_assign_classes():
             best_class = None
             best_score = float('-inf')
             
-            # Harte Bedingung: Bei Sprachfokus dürfen nur passende Schüler in die Klasse
-            eligible_classes = [c for c in eligible_classes if language_match(student, class_config[c])]
+            # Harte Bedingung: Bei gesetztem Fokus dürfen nur passende Schüler in die Klasse
+            # (Sprache, Kunst/Musik, Reli/Ethik und Zusatzfach werden jeweils exklusiv geprüft)
+            eligible_classes = [c for c in eligible_classes if focus_match(student, class_config[c])]
             
             # Sicherheitsnetz: Falls keine passende Klasse übrig ist, nimm alle Klassen
-            # ohne Sprachfokus (damit der Schüler überhaupt zugeteilt werden kann)
+            # ganz ohne Fokus (damit der Schüler überhaupt zugeteilt werden kann)
             if not eligible_classes:
-                eligible_classes = [c for c in range(num_classes) if not class_config[c].get('language_focus')]
+                eligible_classes = [c for c in range(num_classes) if not has_any_focus(class_config[c])]
             
             for class_id in eligible_classes:
                 # Prüfe ob Klasse noch Platz hat
