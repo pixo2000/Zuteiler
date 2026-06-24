@@ -778,7 +778,7 @@ def upload_class_list():
             
             # Normalisiere Zusatzfach
             zusatzfach_lower = zusatzfach.lower() if zusatzfach else ''
-            if zusatzfach_lower in ['ek', 'erdkunde']:
+            if zusatzfach_lower in ['ek', 'erdkunde', 'geographie', 'geo']:
                 zusatzfach = 'Ek'
             elif zusatzfach_lower in ['phil', 'philosophie']:
                 zusatzfach = 'Phil'
